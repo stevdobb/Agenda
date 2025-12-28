@@ -14,7 +14,7 @@ export default defineConfig({
         name: 'Agenda Adder',
         short_name: 'AgendaAdd',
         description: 'Quickly add events to your Google Calendar using natural language.',
-        theme_color: '#ffffff',
+        theme_color: '#000000',
         icons: [
           {
             src: 'pwa-192x192.png',

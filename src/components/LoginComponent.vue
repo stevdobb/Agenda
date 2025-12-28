@@ -27,6 +27,8 @@ function initializeGsi() {
               });
               const userinfo = await response.json();
               authStore.setUser(userinfo);
+              // Fetch upcoming events after login
+              await authStore.fetchUpcomingEvents();
             }
           },
         });
@@ -83,13 +85,16 @@ function handleLogout() {
 
 <template>
   <div class="p-4">
-    <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center space-x-4">
-      <img :src="authStore.user.picture" alt="User profile" class="w-10 h-10 rounded-full">
-      <div>
-        <p class="font-semibold">{{ authStore.user.name }}</p>
-        <p class="text-sm text-gray-600">{{ authStore.user.email }}</p>
+    <div v-if="authStore.isLoggedIn && authStore.user" class="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-2 sm:space-y-0">
+      <img v-if="authStore.user.picture" :src="authStore.user.picture" alt="User profile" class="w-10 h-10 rounded-full">
+      <div v-else class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
+        <span>{{ authStore.user.name ? authStore.user.name.charAt(0).toUpperCase() : '?' }}</span>
       </div>
-      <button @click="handleLogout" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+      <div>
+        <p class="font-semibold dark:text-white">{{ authStore.user.name }}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">{{ authStore.user.email }}</p>
+      </div>
+      <button @click="handleLogout" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 mt-4 sm:mt-0">
         Logout
       </button>
     </div>
@@ -97,7 +102,7 @@ function handleLogout() {
       <button @click="handleLogin" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
         Login with Google
       </button>
-       <p class="text-sm text-gray-500 mt-2">
+       <p class="text-sm text-gray-500 dark:text-gray-300 mt-2">
         You need to login to connect your Google Calendar.
       </p>
       

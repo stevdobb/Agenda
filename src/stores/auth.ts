@@ -1,10 +1,45 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { getUpcomingEvents } from '@/services/googleCalendar'
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(null)
   const user = ref<any>(null)
   const isLoggedIn = ref(false)
+  const upcomingEvents = ref<any[]>([])
+  const isDarkMode = ref(false)
+
+  function checkDarkMode() {
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark')
+      isDarkMode.value = true
+    } else {
+      document.documentElement.classList.remove('dark')
+      isDarkMode.value = false
+    }
+  }
+
+  function toggleDarkMode() {
+    isDarkMode.value = !isDarkMode.value
+    if (isDarkMode.value) {
+      localStorage.theme = 'dark'
+      document.documentElement.classList.add('dark')
+    } else {
+      localStorage.theme = 'light'
+      document.documentElement.classList.remove('dark')
+    }
+  }
+
+  async function fetchUpcomingEvents() {
+    try {
+      const events = await getUpcomingEvents();
+      upcomingEvents.value = events;
+    } catch (error) {
+      console.error("Failed to fetch upcoming events:", error);
+      // Optionally, clear events or set an error state
+      upcomingEvents.value = [];
+    }
+  }
 
   function setToken(token: string) {
     accessToken.value = token
@@ -22,6 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = null
     user.value = null
     isLoggedIn.value = false
+    upcomingEvents.value = [] // Clear events on logout
     localStorage.removeItem('google_access_token')
     localStorage.removeItem('google_user')
   }
@@ -40,9 +76,14 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken,
     user,
     isLoggedIn,
+    upcomingEvents,
+    fetchUpcomingEvents,
     setToken,
     setUser,
     clearAuth,
     checkAuth,
+    isDarkMode,
+    checkDarkMode,
+    toggleDarkMode,
   }
 })
