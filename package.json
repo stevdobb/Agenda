@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://stevdobb.github.io/agenda-add",
+  "homepage": "https://stevdobb.github.io/Agenda",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
