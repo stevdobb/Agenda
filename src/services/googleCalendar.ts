@@ -19,6 +19,9 @@ export async function createCalendarEvent(event: CalendarEvent) {
   if (!authStore.accessToken) {
     throw new Error('Not authenticated')
   }
+  if (authStore.isAccessTokenExpired) { // Check for token expiry
+    throw new Error('Access token expired. Please re-authenticate.')
+  }
 
   const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events`, {
     method: 'POST',
@@ -38,21 +41,21 @@ export async function createCalendarEvent(event: CalendarEvent) {
   return await response.json()
 }
 
-export async function getUpcomingEvents() {
+export async function getUpcomingEvents(timeMin: string, timeMax: string) {
   const authStore = useAuthStore()
   if (!authStore.accessToken) {
     throw new Error('Not authenticated')
   }
-
-  const timeMin = new Date().toISOString();
-  const timeMax = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  if (authStore.isAccessTokenExpired) { // Check for token expiry
+    throw new Error('Access token expired. Please re-authenticate.')
+  }
 
   const params = new URLSearchParams({
     timeMin,
     timeMax,
     singleEvents: 'true',
     orderBy: 'startTime',
-    maxResults: '20', // Limit to a reasonable number
+    maxResults: '250', // Increased limit for broader views (week/month)
   });
 
   const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events?${params.toString()}`, {
@@ -76,6 +79,9 @@ export async function deleteCalendarEvent(eventId: string) {
   const authStore = useAuthStore()
   if (!authStore.accessToken) {
     throw new Error('Not authenticated')
+  }
+  if (authStore.isAccessTokenExpired) { // Check for token expiry
+    throw new Error('Access token expired. Please re-authenticate.')
   }
 
   const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events/${eventId}`, {

@@ -19,9 +19,11 @@ function initializeGsi() {
         tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+          prompt: 'consent', // Request consent for offline access
+          access_type: 'offline', // Request refresh token (though GSI client-side doesn't give it directly)
           callback: async (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              authStore.setToken(tokenResponse.access_token)
+            if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
+              authStore.setToken(tokenResponse.access_token, parseInt(tokenResponse.expires_in))
               // Fetch user profile
               const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                 headers: {
