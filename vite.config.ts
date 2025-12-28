@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.svg', 'pwa-512x512.svg'],
       manifest: {
-        name: 'Agenda Adder',
-        short_name: 'AgendaAdd',
+        name: 'Natural Agenda',
+        short_name: 'Natural',
         description: 'Quickly add events to your Google Calendar using natural language.',
         theme_color: '#2d3748',
         background_color: '#2d3748',

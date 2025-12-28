@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import LoginComponent from '@/components/LoginComponent.vue'
 import InstallButton from '@/components/InstallButton.vue'
 import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
 import { PlusIcon, CalendarDaysIcon, TrashIcon, Cog6ToothIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon
@@ -13,6 +12,7 @@ const eventText = ref('')
 const isLoading = ref(false)
 const feedbackMessage = ref('')
 const showSettingsModal = ref(false) // State for settings modal
+const lastAddedEventId = ref<string | null>(null) // To highlight the last added event
 
 onMounted(() => {
   // Fetch events if user is already logged in
@@ -106,8 +106,9 @@ async function createEvent() {
       end: { dateTime: endDate.toISOString(), timeZone: timeZone },
     };
 
-    await createCalendarEvent(calendarEvent);
-    feedbackMessage.value = `✅ Successfully created event: "${summary}"`;
+    const createdEvent = await createCalendarEvent(calendarEvent); // Assuming this returns the created event
+    lastAddedEventId.value = createdEvent.id; // Store the ID for highlighting
+    feedbackMessage.value = `✅ Successfully created event: "${summary}" on ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !authStore.is24HourFormat })}`;
     eventText.value = ''; // Clear input
     
     // Refresh the upcoming events list
@@ -147,8 +148,8 @@ async function deleteEvent(eventId: string) {
 <template>
   <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
     <header class="text-center my-8 relative">
-      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda Adder</h1>
-      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">Add events to your Google Calendar using natural language.</p>
+      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1>
+      <!-- <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">Add events to your Google Calendar using natural language.</p> -->
       
       <!-- Settings Button -->
       <button @click="showSettingsModal = true" class="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -157,12 +158,12 @@ async function deleteEvent(eventId: string) {
     </header>
 
     <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
-      <LoginComponent />
+
 
       <div v-if="authStore.isLoggedIn" class="mt-6 border-t dark:border-gray-700 pt-6">
         <h2 class="text-xl font-semibold mb-4 dark:text-white">Create a new event</h2>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <input
+            <input
           autofocus
             v-model="eventText"
             @keyup.enter="createEvent"
@@ -199,7 +200,16 @@ async function deleteEvent(eventId: string) {
                 {{ formatDayHeader(dayGroup.date) }}
               </h3>
               <ul class="space-y-2">
-                <li v-for="event in dayGroup.events" :key="event.id" class="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600 flex items-center justify-between space-x-3">
+                <li
+                  v-for="event in dayGroup.events"
+                  :key="event.id"
+                  :class="[
+                    'p-3 rounded-md border flex items-center justify-between space-x-3 transition-all duration-300',
+                    event.id === lastAddedEventId
+                      ? 'bg-green-100 dark:bg-green-800 border-green-400 dark:border-green-600 shadow-lg'
+                      : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                  ]"
+                >
                   <div class="flex items-start space-x-3">
                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">
                       {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}

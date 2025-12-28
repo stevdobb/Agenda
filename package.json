@@ -1,5 +1,5 @@
 {
-  "name": "agenda-add",
+  "name": "natural-agenda",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,8 +14,15 @@
   "dependencies": {
     "@headlessui/vue": "^1.7.22",
     "@heroicons/vue": "^2.1.3",
+    "@tanstack/vue-table": "^8.21.3",
     "chrono-node": "^2.7.6",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.562.0",
     "pinia": "^2.1.7",
+    "reka-ui": "^2.7.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
     "vue": "^3.4.27",
     "vue-router": "^4.3.2"
   },
