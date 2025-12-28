@@ -24,7 +24,13 @@ async function createEvent() {
     }
 
     const result = parsedResults[0];
-    const summary = result.text;
+    // The summary is the original text with the date part removed.
+    const summary = eventText.value.replace(result.text, '').trim();
+
+    if (!summary) {
+      throw new Error("Please provide a title for the event.");
+    }
+
     const startDate = result.start.date();
 
     // Default to a 1-hour event if no end time is parsed
