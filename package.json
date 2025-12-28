@@ -23,11 +23,12 @@
     "reka-ui": "^2.7.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^9.0.1",
     "vue": "^3.4.27",
-    "vue-router": "^4.3.2",
-    "uuid": "^9.0.1"
+    "vue-router": "^4.3.2"
   },
   "devDependencies": {
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-vue": "^5.0.5",
     "autoprefixer": "^10.4.19",
     "gh-pages": "^6.1.1",

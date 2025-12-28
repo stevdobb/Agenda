@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { defineProps, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
 
 const props = defineProps<{

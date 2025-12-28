@@ -81,9 +81,7 @@ watch(() => [currentDate.value, currentView.value] as const, async ([newDate, ne
 
     fetchStart = new Date(startOfMonth);
     fetchStart.setMonth(startOfMonth.getMonth() - 1); // 1 month before
-    fetchEnd = new Date(endOfMonth);
-    fetchEnd.setMonth(endOfMonth.getMonth() + 1); // 1 month after
-    fetchEnd.setDate(0); // Set to last day of next month
+    fetchEnd = new Date(newDate.getFullYear(), newDate.getMonth() + 2, 0);
 
   } else {
     // Fallback for unknown view, use default list range
