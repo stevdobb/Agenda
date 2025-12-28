@@ -86,15 +86,12 @@ function handleLogout() {
 <template>
   <div class="p-4">
     <div v-if="authStore.isLoggedIn && authStore.user" class="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-2 sm:space-y-0">
-      <img v-if="authStore.user.picture" :src="authStore.user.picture" alt="User profile" class="w-10 h-10 rounded-full">
-      <div v-else class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
-        <span>{{ authStore.user.name ? authStore.user.name.charAt(0).toUpperCase() : '?' }}</span>
-      </div>
+
       <div>
         <p class="font-semibold dark:text-white">{{ authStore.user.name }}</p>
         <p class="text-sm text-gray-600 dark:text-gray-300">{{ authStore.user.email }}</p>
       </div>
-      <button @click="handleLogout" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 mt-4 sm:mt-0">
+      <button @click="handleLogout" class="text-sm text-gray-500 dark:text-gray-400 sm:ml-auto">
         Logout
       </button>
     </div>

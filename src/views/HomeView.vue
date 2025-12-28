@@ -2,9 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import LoginComponent from '@/components/LoginComponent.vue'
-import { PlusIcon, CalendarDaysIcon } from '@heroicons/vue/24/solid'
-import * as chrono from 'chrono-node'
-import { createCalendarEvent } from '@/services/googleCalendar'
+import InstallButton from '@/components/InstallButton.vue'
+import { PlusIcon, CalendarDaysIcon, TrashIcon } from '@heroicons/vue/24/solid'
+import chrono from '@/services/customChrono'
+import { createCalendarEvent, deleteCalendarEvent } from '@/services/googleCalendar'
 
 const authStore = useAuthStore()
 const eventText = ref('')
@@ -117,13 +118,35 @@ async function createEvent() {
     isLoading.value = false;
   }
 }
+
+async function deleteEvent(eventId: string) {
+  // Optional: Ask for confirmation
+  // if (!confirm('Are you sure you want to delete this event?')) {
+  //   return;
+  // }
+
+  isLoading.value = true;
+  feedbackMessage.value = '';
+
+  try {
+    await deleteCalendarEvent(eventId);
+    feedbackMessage.value = '✅ Event successfully deleted.';
+    // Refresh the event list
+    await authStore.fetchUpcomingEvents();
+  } catch (error: any) {
+    feedbackMessage.value = `❌ Error deleting event: ${error.message}`;
+    console.error(error);
+  } finally {
+    isLoading.value = false;
+  }
+}
 </script>
 
 <template>
   <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
     <header class="text-center my-8">
-      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda Adder</h1>
-      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">Add events to your Google Calendar using natural language.</p>
+      <!-- <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda Adder</h1>
+      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">Add events to your Google Calendar using natural language.</p> -->
     </header>
 
     <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
@@ -133,6 +156,7 @@ async function createEvent() {
         <h2 class="text-xl font-semibold mb-4 dark:text-white">Create a new event</h2>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <input
+          autofocus
             v-model="eventText"
             @keyup.enter="createEvent"
             type="text"
@@ -168,11 +192,16 @@ async function createEvent() {
                 {{ formatDayHeader(dayGroup.date) }}
               </h3>
               <ul class="space-y-2">
-                <li v-for="event in dayGroup.events" :key="event.id" class="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600 flex items-start space-x-3">
-                  <p class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">
-                    {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
-                  </p>
-                  <p class="font-semibold text-gray-800 dark:text-white">{{ event.summary }}</p>
+                <li v-for="event in dayGroup.events" :key="event.id" class="p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600 flex items-center justify-between space-x-3">
+                  <div class="flex items-start space-x-3">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">
+                      {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
+                    </p>
+                    <p class="font-semibold text-gray-800 dark:text-white">{{ event.summary }}</p>
+                  </div>
+                  <button @click="deleteEvent(event.id)" :disabled="isLoading" class="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-700" aria-label="Delete event">
+                    <TrashIcon class="h-5 w-5" />
+                  </button>
                 </li>
               </ul>
             </div>
@@ -183,5 +212,6 @@ async function createEvent() {
         </div>
       </div>
     </div>
+    <InstallButton />
   </div>
 </template>

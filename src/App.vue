@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import InstallButton from './components/InstallButton.vue'
 
 const authStore = useAuthStore()
 
@@ -14,5 +15,6 @@ onMounted(() => {
 <template>
   <div class="bg-gray-100 dark:bg-gray-900 min-h-screen">
     <RouterView />
+    <InstallButton />
   </div>
 </template>

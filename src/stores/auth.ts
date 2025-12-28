@@ -10,12 +10,17 @@ export const useAuthStore = defineStore('auth', () => {
   const isDarkMode = ref(false)
 
   function checkDarkMode() {
-    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    if (localStorage.theme === 'light') {
+      document.documentElement.classList.remove('dark')
+      isDarkMode.value = false
+    } else if (localStorage.theme === 'dark') {
       document.documentElement.classList.add('dark')
       isDarkMode.value = true
     } else {
-      document.documentElement.classList.remove('dark')
-      isDarkMode.value = false
+      // Default to dark mode if no theme is set
+      localStorage.theme = 'dark'
+      document.documentElement.classList.add('dark')
+      isDarkMode.value = true
     }
   }
 

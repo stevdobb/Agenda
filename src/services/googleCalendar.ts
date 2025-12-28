@@ -71,3 +71,26 @@ export async function getUpcomingEvents() {
   const data = await response.json();
   return data.items || [];
 }
+
+export async function deleteCalendarEvent(eventId: string) {
+  const authStore = useAuthStore()
+  if (!authStore.accessToken) {
+    throw new Error('Not authenticated')
+  }
+
+  const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events/${eventId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${authStore.accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    console.error('Failed to delete event:', error)
+    throw new Error(`Failed to delete event: ${error.error.message}`)
+  }
+
+  // DELETE requests to this endpoint return an empty 204 response on success
+  return true;
+}
