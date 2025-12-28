@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = ref(false)
   const upcomingEvents = ref<any[]>([])
   const isDarkMode = ref(false)
+  const is24HourFormat = ref(true) // Default to 24-hour format
 
   function checkDarkMode() {
     if (localStorage.theme === 'light') {
@@ -33,6 +34,11 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.theme = 'light'
       document.documentElement.classList.remove('dark')
     }
+  }
+
+  function toggle24HourFormat() {
+    is24HourFormat.value = !is24HourFormat.value
+    localStorage.setItem('24_hour_format', JSON.stringify(is24HourFormat.value))
   }
 
   async function fetchUpcomingEvents() {
@@ -65,15 +71,22 @@ export const useAuthStore = defineStore('auth', () => {
     upcomingEvents.value = [] // Clear events on logout
     localStorage.removeItem('google_access_token')
     localStorage.removeItem('google_user')
+    localStorage.removeItem('24_hour_format') // Clear time format preference
   }
 
   function checkAuth() {
     const token = localStorage.getItem('google_access_token')
     const userData = localStorage.getItem('google_user')
+    const format24Hour = localStorage.getItem('24_hour_format')
+
     if (token && userData) {
       accessToken.value = token
       user.value = JSON.parse(userData)
       isLoggedIn.value = true
+    }
+
+    if (format24Hour !== null) {
+      is24HourFormat.value = JSON.parse(format24Hour)
     }
   }
 
@@ -90,5 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
     isDarkMode,
     checkDarkMode,
     toggleDarkMode,
+    is24HourFormat,
+    toggle24HourFormat,
   }
 })

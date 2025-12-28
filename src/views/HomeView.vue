@@ -3,7 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import LoginComponent from '@/components/LoginComponent.vue'
 import InstallButton from '@/components/InstallButton.vue'
-import { PlusIcon, CalendarDaysIcon, TrashIcon } from '@heroicons/vue/24/solid'
+import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
+import { PlusIcon, CalendarDaysIcon, TrashIcon, Cog6ToothIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent } from '@/services/googleCalendar'
 
@@ -11,6 +12,7 @@ const authStore = useAuthStore()
 const eventText = ref('')
 const isLoading = ref(false)
 const feedbackMessage = ref('')
+const showSettingsModal = ref(false) // State for settings modal
 
 onMounted(() => {
   // Fetch events if user is already logged in
@@ -23,9 +25,9 @@ onMounted(() => {
 function formatEventTime(dateTime: string) {
   if (!dateTime) return 'All day';
   return new Date(dateTime).toLocaleString(undefined, {
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true,
+    hour12: !authStore.is24HourFormat,
   });
 }
 
@@ -144,9 +146,14 @@ async function deleteEvent(eventId: string) {
 
 <template>
   <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
-    <header class="text-center my-8">
-      <!-- <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda Adder</h1>
-      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">Add events to your Google Calendar using natural language.</p> -->
+    <header class="text-center my-8 relative">
+      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Agenda Adder</h1>
+      <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">Add events to your Google Calendar using natural language.</p>
+      
+      <!-- Settings Button -->
+      <button @click="showSettingsModal = true" class="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+        <Cog6ToothIcon class="h-6 w-6" />
+      </button>
     </header>
 
     <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
@@ -213,5 +220,8 @@ async function deleteEvent(eventId: string) {
       </div>
     </div>
     <InstallButton />
+
+    <!-- Settings Modal -->
+    <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
   </div>
 </template>

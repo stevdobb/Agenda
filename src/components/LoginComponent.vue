@@ -78,31 +78,18 @@ async function handleLogin() {
   }
 }
 
-function handleLogout() {
-  authStore.clearAuth()
-}
+
 </script>
 
 <template>
   <div class="p-4">
-    <div v-if="authStore.isLoggedIn && authStore.user" class="flex flex-col sm:flex-row items-center sm:space-x-4 space-y-2 sm:space-y-0">
-
-      <div>
-        <p class="font-semibold dark:text-white">{{ authStore.user.name }}</p>
-        <p class="text-sm text-gray-600 dark:text-gray-300">{{ authStore.user.email }}</p>
-      </div>
-      <button @click="handleLogout" class="text-sm text-gray-500 dark:text-gray-400 sm:ml-auto">
-        Logout
-      </button>
-    </div>
-    <div v-else>
+    <div v-if="!authStore.isLoggedIn">
       <button @click="handleLogin" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
         Login with Google
       </button>
        <p class="text-sm text-gray-500 dark:text-gray-300 mt-2">
         You need to login to connect your Google Calendar.
       </p>
-      
     </div>
   </div>
 </template>
