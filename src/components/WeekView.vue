@@ -89,6 +89,11 @@ function navigateWeek(direction: 'prev' | 'next') {
 function goToToday() {
   emit('update:currentDate', new Date());
 }
+
+function isToday(date: Date) {
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+}
 </script>
 
 <template>
@@ -109,12 +114,23 @@ function goToToday() {
 
     <!-- Week Days and Events -->
     <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
-      <div v-for="day in weekDays" :key="day.toISOString()" class="bg-gray-50 dark:bg-gray-700 rounded-md p-3">
+      <div
+        v-for="day in weekDays"
+        :key="day.toISOString()"
+        :class="[
+          'rounded-md p-3',
+          isToday(day) ? 'bg-blue-100 dark:bg-blue-900 border border-blue-500' : 'bg-gray-50 dark:bg-gray-700'
+        ]"
+      >
         <h4 class="font-bold text-center mb-2">{{ day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }) }}</h4>
         <div v-if="filteredEventsByWeek[day.toISOString().split('T')[0]] && filteredEventsByWeek[day.toISOString().split('T')[0]].length > 0">
           <ul class="space-y-2">
-            <li v-for="event in filteredEventsByWeek[day.toISOString().split('T')[0]]" :key="event.id" class="text-sm">
-              <p class="font-medium">{{ formatEventTime(event.start.dateTime) }} - {{ event.summary }}</p>
+            <li v-for="event in filteredEventsByWeek[day.toISOString().split('T')[0]]" :key="event.id"
+                :class="[
+                  'text-sm p-1 rounded-md bg-gray-200 dark:bg-gray-600', // Default background
+                ]"
+            >
+              <p class="font-medium text-gray-800 dark:text-gray-200">{{ formatEventTime(event.start.dateTime) }} - {{ event.summary }}</p>
             </li>
           </ul>
         </div>

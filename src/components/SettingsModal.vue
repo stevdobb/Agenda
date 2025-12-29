@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
-import { XMarkIcon, SunIcon, MoonIcon, ClockIcon, ArrowRightEndOnRectangleIcon } from '@heroicons/vue/24/solid'
+import { XMarkIcon, SunIcon, MoonIcon, ClockIcon, ArrowRightEndOnRectangleIcon, PlusIcon } from '@heroicons/vue/24/solid'
 
 const authStore = useAuthStore()
 
@@ -20,22 +20,21 @@ function initializeGsi() {
           client_id: GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
           prompt: 'consent', // Request consent for offline access
-          callback: async (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
-              authStore.setToken(tokenResponse.access_token, Number(tokenResponse.expires_in))
-              // Fetch user profile
-              const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: {
-                  'Authorization': `Bearer ${tokenResponse.access_token}`
-                }
-              });
-              const userinfo = await response.json();
-              authStore.setUser(userinfo);
-              // Fetch upcoming events after login
-              await authStore.fetchUpcomingEvents();
-            }
-          },
-        });
+                      callback: async (tokenResponse) => {
+                      if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
+                        // Fetch user profile
+                        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                          headers: {
+                            'Authorization': `Bearer ${tokenResponse.access_token}`
+                          }
+                        });
+                        const userinfo = await response.json();
+                        // Pass user_id (from sub claim) and userinfo to setToken
+                        authStore.setToken(tokenResponse.access_token, Number(tokenResponse.expires_in), userinfo.sub, userinfo)
+                        // Fetch upcoming events after login (for all accounts)
+                        await authStore.fetchUpcomingEvents();
+                      }
+                    },        });
         resolve();
       } else {
         reject(new Error("Google GSI script not loaded."));
@@ -46,7 +45,7 @@ function initializeGsi() {
   });
 }
 
-async function handleLogin() {
+async function handleLogin(isAddAnother: boolean = false) { // Add isAddAnother parameter
   const checkAndInitialize = () => {
     return new Promise<void>((resolve, reject) => {
       let attempts = 0;
@@ -61,7 +60,7 @@ async function handleLogin() {
           }
         } else {
           attempts++;
-          if (attempts > 20) { // Stop after 10 seconds
+          if (attempts > 20) { // Stop after 10 seconds (20 * 500ms)
             clearInterval(interval);
             reject(new Error("Failed to load Google's authentication script. Please check your connection and try again."));
           }
@@ -74,12 +73,23 @@ async function handleLogin() {
     if (!tokenClient) {
       await checkAndInitialize();
     }
-    tokenClient?.requestAccessToken();
+    // Modify requestAccessToken call
+    if (isAddAnother) {
+      tokenClient?.requestAccessToken({ prompt: 'select_account' });
+    } else {
+      tokenClient?.requestAccessToken();
+    }
   } catch (error) {
     console.error(error);
     // You could show this error to the user in the UI
     alert((error as Error).message);
   }
+}
+
+const setActiveAccount = (accountId: string) => {
+  authStore.activeAccountId = accountId
+  authStore.fetchUpcomingEvents()
+  localStorage.setItem('active_google_account_id', accountId)
 }
 
 const close = () => {
@@ -123,18 +133,36 @@ const close = () => {
           </label>
         </div>
 
+        <!-- Connected Accounts Section -->
+        <div class="pt-4 border-t dark:border-gray-700">
+          <h4 class="text-md font-semibold mb-2">Connected Accounts</h4>
+          <div v-if="authStore.accounts.length > 0" class="space-y-2 mb-4">
+            <div v-for="account in authStore.accounts" :key="account.id"
+                 :class="['flex items-center justify-between p-2 rounded-md border', authStore.activeAccountId === account.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600']">
+              <div class="flex items-center">
+                <span :class="['w-4 h-4 rounded-full mr-2', account.color.split(' ')[0], account.color.split(' ')[1], account.color.split(' ')[2].replace('border', 'bg')]"></span>
+                <span class="text-sm">{{ account.user?.email }}</span>
+              </div>
+              <div class="flex space-x-2">
+                <button v-if="authStore.activeAccountId !== account.id" @click="setActiveAccount(account.id)" class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500">Set Active</button>
+                <button @click="authStore.removeAccount(account.id)" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">Remove</button>
+              </div>
+            </div>
+          </div>
+          <button @click="handleLogin(true)" class="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center">
+            <PlusIcon class="h-5 w-5 mr-2" /> Add Another Account
+          </button>
+        </div>
+
         <!-- Login/Logout Section -->
         <div class="pt-4 border-t dark:border-gray-700">
-          <div v-if="authStore.isLoggedIn" class="text-center">
-            <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">
-              Logged in as: <span class="font-semibold">{{ authStore.user?.name || authStore.user?.email }}</span>
-            </p>
+          <div v-if="authStore.accounts.length > 0" class="text-center">
             <button @click="authStore.clearAuth()" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 flex items-center justify-center mx-auto">
-              <ArrowRightEndOnRectangleIcon class="h-5 w-5 mr-2" /> Logout
+              <ArrowRightEndOnRectangleIcon class="h-5 w-5 mr-2" /> Logout All Accounts
             </button>
           </div>
           <div v-else class="text-center">
-            <button @click="handleLogin" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center mx-auto">
+            <button @click="handleLogin(false)" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center mx-auto">
               Login with Google
             </button>
              <p class="text-sm text-gray-500 dark:text-gray-300 mt-2">

@@ -3,16 +3,51 @@ import { ref } from 'vue'
 import { computed } from 'vue'
 import { getUpcomingEvents } from '@/services/googleCalendar'
 
+interface GoogleAccount {
+  id: string; // Unique ID for the account (e.g., Google user ID from 'sub' claim)
+  accessToken: string;
+  expiresAt: number;
+  user: any; // User profile data (e.g., name, email, picture)
+  color: string; // Unique color for this account's events
+  events: any[]; // Events fetched for this account
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const accessToken = ref<string | null>(null)
-  const expiresAt = ref<number | null>(null) // New ref for token expiration timestamp
-  const user = ref<any>(null)
-  const isLoggedIn = ref(false)
-  const upcomingEvents = ref<any[]>([])
+  const accounts = ref<GoogleAccount[]>([]);
+  const activeAccountId = ref<string | null>(null); // To track which account is currently active for event creation/login display
+
+  // Predefined set of colors for accounts
+  const accountColors = [
+    'bg-red-100 dark:bg-red-900 border-red-500',
+    'bg-blue-100 dark:bg-blue-900 border-blue-500',
+    'bg-green-100 dark:bg-green-900 border-green-500',
+    'bg-yellow-100 dark:bg-yellow-900 border-yellow-500',
+    'bg-purple-100 dark:bg-purple-900 border-purple-500',
+    'bg-indigo-100 dark:bg-indigo-900 border-indigo-500',
+    'bg-pink-100 dark:bg-pink-900 border-pink-500',
+  ];
+
+  const isLoggedIn = computed(() => accounts.value.length > 0)
   const isDarkMode = ref(false)
   const is24HourFormat = ref(true) // Default to 24-hour format
   const fetchRangeStart = ref<Date | null>(null) // Start of the currently fetched event range
   const fetchRangeEnd = ref<Date | null>(null) // End of the currently fetched event range
+
+  const upcomingEvents = computed(() => {
+    const allAggregatedEvents: any[] = [];
+    accounts.value.forEach(account => {
+      allAggregatedEvents.push(...account.events);
+    });
+
+    // Sort all events by start time
+    allAggregatedEvents.sort((a, b) => {
+      const timeA = a.start.dateTime ? new Date(a.start.dateTime).getTime() : new Date(a.start.date).getTime();
+      const timeB = b.start.dateTime ? new Date(b.start.dateTime).getTime() : new Date(b.start.date).getTime();
+      return timeA - timeB;
+    });
+    console.log('AuthStore: upcomingEvents computed - returning total events:', allAggregatedEvents.length);
+    return allAggregatedEvents;
+  });
 
   function checkDarkMode() {
     if (localStorage.theme === 'light') {
@@ -46,98 +81,165 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUpcomingEvents(startDate?: Date, endDate?: Date) {
-    if (!accessToken.value) {
-      console.warn("Attempted to fetch events without access token.");
-      upcomingEvents.value = [];
+    console.log('AuthStore: fetchUpcomingEvents called.');
+    if (accounts.value.length === 0) {
+      console.warn("AuthStore: No accounts logged in to fetch events for.");
       return;
     }
 
-    try {
-      let effectiveStartDate = startDate;
-      let effectiveEndDate = endDate;
+    let effectiveStartDate = startDate;
+    let effectiveEndDate = endDate;
 
-      if (!effectiveStartDate || !effectiveEndDate) {
-        // Default range: 1 month before current date to 2 months after
-        const today = new Date();
-        effectiveStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1); // Start of previous month
-        effectiveEndDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);   // End of month after next
+    if (!effectiveStartDate || !effectiveEndDate) {
+      // Default range: 1 month before current date to 2 months after
+      const today = new Date();
+      effectiveStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1); // Start of previous month
+      effectiveEndDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);   // End of month after next
+    }
+    console.log('AuthStore: Fetching events for range:', effectiveStartDate.toISOString(), effectiveEndDate.toISOString());
+
+    const timeMin = effectiveStartDate.toISOString();
+    const timeMax = effectiveEndDate.toISOString();
+
+    for (const account of accounts.value) {
+      console.log(`AuthStore: Processing account ${account.user.email} (${account.id})`);
+      // Check if token is expired for this account
+      if (account.expiresAt <= Date.now() + 5 * 1000) { // 5 seconds buffer
+        console.warn(`AuthStore: Access token for account ${account.user.email} is expired. Skipping event fetch.`);
+        account.events = []; // Clear events for expired token
+        // In a real app, you would attempt to refresh the token here.
+        continue;
       }
 
-      // Ensure dates are ISO strings
-      const timeMin = effectiveStartDate.toISOString();
-      const timeMax = effectiveEndDate.toISOString();
-
-      const events = await getUpcomingEvents(timeMin, timeMax);
-      upcomingEvents.value = events;
-      fetchRangeStart.value = effectiveStartDate;
-      fetchRangeEnd.value = effectiveEndDate;
-    } catch (error) {
-      console.error("Failed to fetch upcoming events:", error);
-      upcomingEvents.value = [];
-      fetchRangeStart.value = null;
-      fetchRangeEnd.value = null;
+      try {
+        const accountEvents = await getUpcomingEvents(account.accessToken, timeMin, timeMax);
+        console.log(`AuthStore: Fetched ${accountEvents.length} events for account ${account.user.email}.`);
+        // Augment events with account ID and color before storing
+        account.events = accountEvents.map((event: any) => ({
+          ...event,
+          accountId: account.id,
+          accountColor: account.color,
+        }));
+      } catch (error) {
+        console.error(`AuthStore: Failed to fetch events for account ${account.user.email}:`, error);
+        account.events = []; // Clear events for failed fetch
+      }
     }
+
+    fetchRangeStart.value = effectiveStartDate;
+    fetchRangeEnd.value = effectiveEndDate;
+    console.log('AuthStore: fetchUpcomingEvents completed. Total events in accounts:', accounts.value.reduce((sum, acc) => sum + acc.events.length, 0));
   }
 
-  function setToken(token: string, expires_in: number) {
-    accessToken.value = token
-    expiresAt.value = Date.now() + expires_in * 1000 // Convert expires_in to absolute timestamp
-    isLoggedIn.value = true
+  function setToken(accessToken: string, expires_in: number, user_id: string, user_data: any) {
+    const expirationTime = Date.now() + expires_in * 1000;
+    let account = accounts.value.find(acc => acc.id === user_id);
 
-    localStorage.setItem('google_access_token', token)
-    localStorage.setItem('google_expires_at', String(expiresAt.value))
+    if (account) {
+      // Update existing account
+      account.accessToken = accessToken;
+      account.expiresAt = expirationTime;
+      account.user = user_data; // Update user data in case it changed
+    } else {
+      // Add new account
+      const newAccount: GoogleAccount = {
+        id: user_id,
+        accessToken: accessToken,
+        expiresAt: expirationTime,
+        user: user_data,
+        color: accountColors[accounts.value.length % accountColors.length], // Assign a color
+        events: [],
+      };
+      accounts.value.push(newAccount);
+    }
+    activeAccountId.value = user_id;
+    console.log('AuthStore: Account added/updated and set as active:', user_id, accounts.value);
+
+    // Persist all accounts to localStorage
+    localStorage.setItem('google_accounts', JSON.stringify(accounts.value));
+    localStorage.setItem('active_google_account_id', user_id);
   }
 
   function setUser(userData: any) {
-    user.value = userData
-    localStorage.setItem('google_user', JSON.stringify(userData))
+    if (activeAccountId.value) {
+      const account = accounts.value.find(acc => acc.id === activeAccountId.value);
+      if (account) {
+        account.user = userData;
+        localStorage.setItem('google_accounts', JSON.stringify(accounts.value)); // Persist change
+      }
+    }
   }
 
   function clearAuth() {
-    accessToken.value = null
-    expiresAt.value = null // Clear expiration timestamp
-    user.value = null
-    isLoggedIn.value = false
-    upcomingEvents.value = [] // Clear events on logout
-    localStorage.removeItem('google_access_token')
-    localStorage.removeItem('google_expires_at') // Clear expiration timestamp from localStorage
-    localStorage.removeItem('google_user')
-    localStorage.removeItem('24_hour_format') // Clear time format preference
+    accounts.value = [];
+    activeAccountId.value = null;
+    localStorage.removeItem('google_accounts');
+    localStorage.removeItem('active_google_account_id');
+    // Keep '24_hour_format' as it's a general setting, not account-specific
   }
 
-  async function checkAuth() {
-    const token = localStorage.getItem('google_access_token')
-    const expires = localStorage.getItem('google_expires_at') // Load expiration timestamp
-    const userData = localStorage.getItem('google_user')
-    const format24Hour = localStorage.getItem('24_hour_format')
-
-    if (token && userData && expires) { // Check if expires is also present
-      accessToken.value = token
-      expiresAt.value = Number(expires) // Set expiration timestamp
-      user.value = JSON.parse(userData)
-      isLoggedIn.value = true
+  function removeAccount(accountId: string) {
+    accounts.value = accounts.value.filter(account => account.id !== accountId);
+    if (activeAccountId.value === accountId) {
+      activeAccountId.value = accounts.value.length > 0 ? accounts.value[0].id : null;
+    }
+    localStorage.setItem('google_accounts', JSON.stringify(accounts.value));
+    if (activeAccountId.value) {
+      localStorage.setItem('active_google_account_id', activeAccountId.value);
     } else {
-      // If any part of the token/user/expires data is missing, clear partial auth data
-      clearAuth();
+      localStorage.removeItem('active_google_account_id');
+    }
+    // Re-fetch events for remaining accounts
+    fetchUpcomingEvents();
+  }
+
+
+
+  async function checkAuth() {
+    const savedAccounts = localStorage.getItem('google_accounts');
+    const savedActiveAccountId = localStorage.getItem('active_google_account_id');
+    const format24Hour = localStorage.getItem('24_hour_format');
+
+    if (savedAccounts) {
+      const parsedAccounts: GoogleAccount[] = JSON.parse(savedAccounts);
+      console.log('AuthStore: Loaded accounts from localStorage:', parsedAccounts);
+      const nonExpiredAccounts = parsedAccounts.filter(account => account.expiresAt > Date.now() + 5 * 1000); // Filter out expired tokens
+      if (parsedAccounts.length !== nonExpiredAccounts.length) {
+        console.warn('AuthStore: Some accounts were filtered out due to expired tokens.');
+      }
+
+      accounts.value = nonExpiredAccounts;
+      if (savedActiveAccountId && accounts.value.some(acc => acc.id === savedActiveAccountId)) {
+        activeAccountId.value = savedActiveAccountId;
+        console.log('AuthStore: Active account restored:', activeAccountId.value);
+      } else if (accounts.value.length > 0) {
+        activeAccountId.value = accounts.value[0].id; // Set first available as active
+        console.log('AuthStore: No active account ID found or invalid, setting first account as active:', activeAccountId.value);
+      } else {
+        activeAccountId.value = null;
+        console.log('AuthStore: No active accounts available.');
+      }
+    } else {
+      console.log('AuthStore: No saved accounts found in localStorage.');
+      // Clear old single-account localStorage items if multi-account not found
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_expires_at');
+      localStorage.removeItem('google_user');
     }
 
     if (format24Hour !== null) {
-      is24HourFormat.value = JSON.parse(format24Hour)
+      is24HourFormat.value = JSON.parse(format24Hour);
     }
 
-    // Fetch events for a default range when authenticated
-    if (isLoggedIn.value) {
+    // Fetch events for all active accounts if logged in
+    if (accounts.value.length > 0) {
       await fetchUpcomingEvents();
     }
   }
 
-  const isAccessTokenExpired = computed(() => {
-    return !accessToken.value || !expiresAt.value || expiresAt.value <= Date.now() + 5 * 1000; // Consider expired 5 seconds before actual expiry
-  });
-
   return {
-    accessToken,
-    user,
+    accounts,           // Expose the accounts array
+    activeAccountId,    // Expose the active account ID
     isLoggedIn,
     upcomingEvents,
     fetchUpcomingEvents,
@@ -150,8 +252,8 @@ export const useAuthStore = defineStore('auth', () => {
     toggleDarkMode,
     is24HourFormat,
     toggle24HourFormat,
-    fetchRangeStart, // Expose new refs
-    fetchRangeEnd,   // Expose new refs
-    isAccessTokenExpired, // Expose computed property
+    fetchRangeStart,
+    fetchRangeEnd,
+    removeAccount,
   }
 })

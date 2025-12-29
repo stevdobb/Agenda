@@ -1,4 +1,3 @@
-import { useAuthStore } from '@/stores/auth'
 
 const CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3'
 
@@ -14,19 +13,11 @@ interface CalendarEvent {
   };
 }
 
-export async function createCalendarEvent(event: CalendarEvent) {
-  const authStore = useAuthStore()
-  if (!authStore.accessToken) {
-    throw new Error('Not authenticated')
-  }
-  if (authStore.isAccessTokenExpired) { // Check for token expiry
-    throw new Error('Access token expired. Please re-authenticate.')
-  }
-
+export async function createCalendarEvent(accessToken: string, event: CalendarEvent) {
   const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${authStore.accessToken}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(event),
@@ -41,15 +32,7 @@ export async function createCalendarEvent(event: CalendarEvent) {
   return await response.json()
 }
 
-export async function getUpcomingEvents(timeMin: string, timeMax: string) {
-  const authStore = useAuthStore()
-  if (!authStore.accessToken) {
-    throw new Error('Not authenticated')
-  }
-  if (authStore.isAccessTokenExpired) { // Check for token expiry
-    throw new Error('Access token expired. Please re-authenticate.')
-  }
-
+export async function getUpcomingEvents(accessToken: string, timeMin: string, timeMax: string) {
   const params = new URLSearchParams({
     timeMin,
     timeMax,
@@ -61,7 +44,7 @@ export async function getUpcomingEvents(timeMin: string, timeMax: string) {
   const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events?${params.toString()}`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${authStore.accessToken}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
   });
 
@@ -75,19 +58,11 @@ export async function getUpcomingEvents(timeMin: string, timeMax: string) {
   return data.items || [];
 }
 
-export async function deleteCalendarEvent(eventId: string) {
-  const authStore = useAuthStore()
-  if (!authStore.accessToken) {
-    throw new Error('Not authenticated')
-  }
-  if (authStore.isAccessTokenExpired) { // Check for token expiry
-    throw new Error('Access token expired. Please re-authenticate.')
-  }
-
+export async function deleteCalendarEvent(accessToken: string, eventId: string) {
   const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events/${eventId}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${authStore.accessToken}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
   })
 

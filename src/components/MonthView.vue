@@ -139,7 +139,11 @@ function isToday(date: Date | null) {
           {{ day.getDate() }}
         </div>
         <div v-if="day && filteredEventsByMonth[day.toISOString().split('T')[0]]" class="space-y-0.5 text-xs">
-          <p v-for="event in filteredEventsByMonth[day.toISOString().split('T')[0]]" :key="event.id" class="truncate text-gray-700 dark:text-gray-300 bg-blue-100 dark:bg-blue-900 rounded-sm px-1 py-0.5">
+          <p v-for="event in filteredEventsByMonth[day.toISOString().split('T')[0]]" :key="event.id"
+             :class="[
+               'truncate text-gray-800 dark:text-gray-200 rounded-sm px-1 py-0.5 bg-gray-200 dark:bg-gray-600', // Default background
+             ]"
+          >
             {{ formatEventTime(event.start.dateTime) }} {{ event.summary }}
           </p>
         </div>

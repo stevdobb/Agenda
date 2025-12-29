@@ -34,14 +34,10 @@ watch(() => [currentDate.value, currentView.value] as const, async ([newDate, ne
                        (newDate instanceof Date && oldDate instanceof Date && (
                          newDate.getMonth() !== oldDate.getMonth() || // Month changed
                          newDate.getFullYear() !== oldDate.getFullYear() // Year changed
-                       ))
-
-  if (!shouldRefetch && authStore.fetchRangeStart && authStore.fetchRangeEnd) {
-    // If not a significant date change or view change, check if the current date is within the fetched range
-    const isWithinRange = newDate >= authStore.fetchRangeStart && newDate <= authStore.fetchRangeEnd;
-    if (isWithinRange) {
-      return; // No need to re-fetch if within current fetched range
-    }
+                       ));
+  
+  if (!shouldRefetch) {
+    return; // No need to re-fetch if no significant change
   }
 
   // Determine the range to fetch based on the current view
@@ -215,13 +211,20 @@ async function createEvent() {
     const endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+    const activeAccount = authStore.accounts.find(acc => acc.id === authStore.activeAccountId);
+    if (!activeAccount) {
+        feedbackMessage.value = `❌ Error: No active account found to create event.`;
+        isLoading.value = false;
+        return;
+    }
+
     const calendarEvent = {
       summary: summary,
       start: { dateTime: startDate.toISOString(), timeZone: timeZone },
       end: { dateTime: endDate.toISOString(), timeZone: timeZone },
     };
 
-    const createdEvent = await createCalendarEvent(calendarEvent); // Assuming this returns the created event
+    const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent); // Assuming this returns the created event
     lastAddedEventId.value = createdEvent.id; // Store the ID for highlighting
     feedbackMessage.value = `✅ Successfully created event: "${summary}" on ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !authStore.is24HourFormat })}`;
     eventText.value = ''; // Clear input
@@ -246,8 +249,15 @@ async function deleteEvent(eventId: string) {
   isLoading.value = true;
   feedbackMessage.value = '';
 
+  const activeAccount = authStore.accounts.find(acc => acc.id === authStore.activeAccountId);
+  if (!activeAccount) {
+      feedbackMessage.value = `❌ Error: No active account found to delete event.`;
+      isLoading.value = false;
+      return;
+  }
+
   try {
-    await deleteCalendarEvent(eventId);
+    await deleteCalendarEvent(activeAccount.accessToken, eventId);
     feedbackMessage.value = '✅ Event successfully deleted.';
     // Refresh the event list
     await authStore.fetchUpcomingEvents();
@@ -262,6 +272,25 @@ async function deleteEvent(eventId: string) {
 function handleMonthDayClick(date: Date) {
   currentDate.value = date;
   currentView.value = 'list';
+}
+
+function manualFetchEvents() {
+  if (!authStore.isLoggedIn) {
+    feedbackMessage.value = '❌ Please log in to refresh events.';
+    return;
+  }
+  // Trigger a re-fetch of events based on the current view and date
+  // The watch effect on currentDate and currentView will handle the range calculation.
+  // We can force a re-fetch by calling the store action directly.
+  authStore.fetchUpcomingEvents();
+  feedbackMessage.value = '✅ Events refreshed.';
+}
+
+function isEventToday(event: any): boolean {
+  const eventDateStr = (event.start.date || event.start.dateTime).split('T')[0];
+  const eventDate = new Date(eventDateStr);
+  const today = new Date();
+  return eventDate.toDateString() === today.toDateString();
 }
 </script>
 
@@ -280,6 +309,7 @@ function handleMonthDayClick(date: Date) {
         <button @click="currentView = 'list'" :class="{'bg-blue-500 text-white': currentView === 'list', 'bg-gray-200 dark:bg-gray-700': currentView !== 'list'}" class="px-3 py-1 rounded-md transition">List</button>
         <button @click="currentView = 'week'" :class="{'bg-blue-500 text-white': currentView === 'week', 'bg-gray-200 dark:bg-gray-700': currentView !== 'week'}" class="px-3 py-1 rounded-md transition">Week</button>
         <button @click="currentView = 'month'" :class="{'bg-blue-500 text-white': currentView === 'month', 'bg-gray-200 dark:bg-gray-700': currentView !== 'month'}" class="px-3 py-1 rounded-md transition">Month</button>
+        <button @click="manualFetchEvents" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Refresh Events</button>
       </div>
     </header>
 
@@ -353,8 +383,10 @@ function handleMonthDayClick(date: Date) {
                   :class="[
                     'p-3 rounded-md border flex items-center justify-between space-x-3 transition-all duration-300',
                     event.id === lastAddedEventId
-                      ? 'bg-green-100 dark:bg-green-800 border-green-400 dark:border-green-600 shadow-lg'
-                      : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                      ? 'bg-green-100 dark:bg-green-800 border-green-400 dark:border-green-600 shadow-lg' // Highlight for last added
+                      : isEventToday(event)
+                        ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' // Highlight for today's events
+                        : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600' // Default
                   ]"
                 >
                   <div class="flex items-start space-x-3">
