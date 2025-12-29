@@ -55,7 +55,7 @@ watch(() => [currentDate.value, currentView.value] as const, async ([newDate, ne
     fetchStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     fetchStart.setHours(0, 0, 0, 0); // Start of today
 
-    fetchEnd = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()); // One year from today
+    fetchEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7); // 7 days from today
   } else if (newView === 'week') {
     // Fetch events for the current week + a buffer of 2 weeks on each side
     const startOfWeek = new Date(newDate);
@@ -149,6 +149,31 @@ const groupedEvents = computed(() => {
   return sortedGroups;
 });
 
+// New computed property for displayed events based on current view
+const displayedGroupedEvents = computed(() => {
+  if (currentView.value === 'list') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysLater = new Date(today);
+    sevenDaysLater.setDate(today.getDate() + 7);
+    sevenDaysLater.setHours(23, 59, 59, 999);
+
+    const filteredGroups: { date: string; events: any[] }[] = [];
+    groupedEvents.value.forEach(dayGroup => {
+      const groupDate = new Date(dayGroup.date);
+      groupDate.setHours(0, 0, 0, 0);
+
+      if (groupDate >= today && groupDate <= sevenDaysLater) {
+        filteredGroups.push(dayGroup);
+      }
+    });
+    return filteredGroups;
+  }
+  // For other views (week, month), we want to show all events that were fetched
+  // as the WeekView and MonthView components will handle their own filtering/display logic.
+  return groupedEvents.value;
+});
+
 async function createEvent() {
   if (!eventText.value.trim() || isLoading.value) return;
 
@@ -233,6 +258,11 @@ async function deleteEvent(eventId: string) {
     isLoading.value = false;
   }
 }
+
+function handleMonthDayClick(date: Date) {
+  currentDate.value = date;
+  currentView.value = 'list';
+}
 </script>
 
 <template>
@@ -311,8 +341,8 @@ async function deleteEvent(eventId: string) {
             <CalendarDaysIcon class="h-6 w-6 mr-2 text-gray-700 dark:text-gray-300" />
             Upcoming Events
           </h2>
-          <div v-if="groupedEvents.length > 0" class="space-y-6">
-            <div v-for="dayGroup in groupedEvents" :key="dayGroup.date" class="space-y-3">
+          <div v-if="displayedGroupedEvents.length > 0" class="space-y-6">
+            <div v-for="dayGroup in displayedGroupedEvents" :key="dayGroup.date" class="space-y-3">
               <h3 class="text-lg font-semibold text-gray-800 dark:text-white border-b dark:border-gray-700 pb-2 mb-2">
                 {{ formatDayHeader(dayGroup.date) }}
               </h3>
@@ -351,7 +381,7 @@ async function deleteEvent(eventId: string) {
 
         <!-- Month View -->
         <div v-if="currentView === 'month' && authStore.isLoggedIn" class="mt-8">
-          <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
+          <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" @dayClicked="handleMonthDayClick" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
         </div>
       </div>
     </div>

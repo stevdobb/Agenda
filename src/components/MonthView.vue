@@ -8,7 +8,7 @@ const props = defineProps<{
   is24HourFormat: boolean
 }>()
 
-const emit = defineEmits(['update:currentDate'])
+const emit = defineEmits(['update:currentDate', 'dayClicked'])
 
 
 // Helper to format date and time
@@ -130,9 +130,10 @@ function isToday(date: Date | null) {
         :key="index"
         :class="[
           'relative h-24 p-1 rounded-md overflow-hidden',
-          day ? 'bg-gray-50 dark:bg-gray-700' : 'bg-gray-200 dark:bg-gray-800',
+          day ? 'bg-gray-50 dark:bg-gray-700 cursor-pointer' : 'bg-gray-200 dark:bg-gray-800',
           isToday(day) ? 'border-2 border-blue-500' : 'border border-gray-200 dark:border-gray-600'
         ]"
+        @click="day && emit('dayClicked', day)"
       >
         <div v-if="day" class="text-right text-xs font-semibold" :class="isToday(day) ? 'text-blue-500' : 'text-gray-800 dark:text-white'">
           {{ day.getDate() }}
