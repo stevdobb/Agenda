@@ -102,14 +102,17 @@ function formatEventTime(dateTime: string) {
 }
 
 function formatDayHeader(dateString: string) {
-  const date = new Date(dateString);
+  const parts = dateString.split('-').map(part => parseInt(part, 10));
+  const date = new Date(parts[0], parts[1] - 1, parts[2]);
+
   const today = new Date();
-  const tomorrow = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  if (date.toDateString() === today.toDateString()) {
+  if (date.getTime() === today.getTime()) {
     return 'Today';
-  } else if (date.toDateString() === tomorrow.toDateString()) {
+  } else if (date.getTime() === tomorrow.getTime()) {
     return 'Tomorrow';
   } else {
     return date.toLocaleString(undefined, {
@@ -132,7 +135,15 @@ const groupedEvents = computed(() => {
   });
 
   // Sort groups by date and events within each group by time
-  const sortedKeys = Object.keys(groups).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const partsA = a.split('-').map(p => parseInt(p, 10));
+    const dateA = new Date(partsA[0], partsA[1] - 1, partsA[2]);
+    
+    const partsB = b.split('-').map(p => parseInt(p, 10));
+    const dateB = new Date(partsB[0], partsB[1] - 1, partsB[2]);
+
+    return dateA.getTime() - dateB.getTime();
+  });
   const sortedGroups: { date: string; events: any[] }[] = [];
 
   sortedKeys.forEach(dateKey => {
@@ -158,8 +169,9 @@ const displayedGroupedEvents = computed(() => {
 
     const filteredGroups: { date: string; events: any[] }[] = [];
     groupedEvents.value.forEach(dayGroup => {
-      const groupDate = new Date(dayGroup.date);
-      groupDate.setHours(0, 0, 0, 0);
+      // Create date from YYYY-MM-DD string, ensuring it's treated as local time midnight
+      const parts = dayGroup.date.split('-').map(part => parseInt(part, 10));
+      const groupDate = new Date(parts[0], parts[1] - 1, parts[2]);
 
       if (groupDate >= today && groupDate <= sevenDaysLater) {
         filteredGroups.push(dayGroup);
@@ -290,9 +302,16 @@ function manualFetchEvents() {
 
 function isEventToday(event: any): boolean {
   const eventDateStr = (event.start.date || event.start.dateTime).split('T')[0];
-  const eventDate = new Date(eventDateStr);
+  
+  // Robustly parse YYYY-MM-DD as local date
+  const parts = eventDateStr.split('-').map((part: string) => parseInt(part, 10));
+  const eventDate = new Date(parts[0], parts[1] - 1, parts[2]);
+
   const today = new Date();
-  return eventDate.toDateString() === today.toDateString();
+  today.setHours(0, 0, 0, 0);
+
+  // Compare year, month, and day for equality in local time
+  return eventDate.getTime() === today.getTime();
 }
 </script>
 

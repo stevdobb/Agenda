@@ -33,6 +33,8 @@ export const useAuthStore = defineStore('auth', () => {
   const fetchRangeStart = ref<Date | null>(null) // Start of the currently fetched event range
   const fetchRangeEnd = ref<Date | null>(null) // End of the currently fetched event range
 
+  const isFetchingEvents = ref(false); // To prevent race conditions
+
   const upcomingEvents = computed(() => {
     const allAggregatedEvents: any[] = [];
     accounts.value.forEach(account => {
@@ -81,54 +83,89 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUpcomingEvents(startDate?: Date, endDate?: Date) {
+    if (isFetchingEvents.value) {
+      console.warn('AuthStore: An event fetch is already in progress. Skipping.');
+      return;
+    }
+
     console.log('AuthStore: fetchUpcomingEvents called.');
     if (accounts.value.length === 0) {
       console.warn("AuthStore: No accounts logged in to fetch events for.");
       return;
     }
 
-    let effectiveStartDate = startDate;
-    let effectiveEndDate = endDate;
+    try {
+      isFetchingEvents.value = true;
 
-    if (!effectiveStartDate || !effectiveEndDate) {
-      // Default range: 1 month before current date to 2 months after
-      const today = new Date();
-      effectiveStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1); // Start of previous month
-      effectiveEndDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);   // End of month after next
-    }
-    console.log('AuthStore: Fetching events for range:', effectiveStartDate.toISOString(), effectiveEndDate.toISOString());
+      let effectiveStartDate = startDate;
+      let effectiveEndDate = endDate;
 
-    const timeMin = effectiveStartDate.toISOString();
-    const timeMax = effectiveEndDate.toISOString();
-
-    for (const account of accounts.value) {
-      console.log(`AuthStore: Processing account ${account.user.email} (${account.id})`);
-      // Check if token is expired for this account
-      if (account.expiresAt <= Date.now() + 5 * 1000) { // 5 seconds buffer
-        console.warn(`AuthStore: Access token for account ${account.user.email} is expired. Skipping event fetch.`);
-        account.events = []; // Clear events for expired token
-        // In a real app, you would attempt to refresh the token here.
-        continue;
+      if (!effectiveStartDate || !effectiveEndDate) {
+        // Default range: From today for one year
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+        effectiveStartDate = new Date(today);
+        effectiveEndDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()); // One year from today
       }
 
-      try {
-        const accountEvents = await getUpcomingEvents(account.accessToken, timeMin, timeMax);
-        console.log(`AuthStore: Fetched ${accountEvents.length} events for account ${account.user.email}.`);
-        // Augment events with account ID and color before storing
-        account.events = accountEvents.map((event: any) => ({
-          ...event,
-          accountId: account.id,
-          accountColor: account.color,
-        }));
-      } catch (error) {
-        console.error(`AuthStore: Failed to fetch events for account ${account.user.email}:`, error);
-        account.events = []; // Clear events for failed fetch
+      // --- Start of change: Prevent re-fetching contained ranges ---
+      if (fetchRangeStart.value && fetchRangeEnd.value && effectiveStartDate >= fetchRangeStart.value && effectiveEndDate <= fetchRangeEnd.value) {
+        console.log('AuthStore: Event range is already covered. Skipping fetch.');
+        return;
       }
-    }
 
-    fetchRangeStart.value = effectiveStartDate;
-    fetchRangeEnd.value = effectiveEndDate;
-    console.log('AuthStore: fetchUpcomingEvents completed. Total events in accounts:', accounts.value.reduce((sum, acc) => sum + acc.events.length, 0));
+      // Expand the fetch range instead of replacing it
+      let newFetchStart = effectiveStartDate;
+      if (fetchRangeStart.value) {
+        newFetchStart = new Date(Math.min(newFetchStart.getTime(), fetchRangeStart.value.getTime()));
+      }
+      let newFetchEnd = effectiveEndDate;
+      if (fetchRangeEnd.value) {
+        newFetchEnd = new Date(Math.max(newFetchEnd.getTime(), fetchRangeEnd.value.getTime()));
+      }
+      // --- End of change ---
+
+      console.log('AuthStore: Fetching events for range:', newFetchStart.toISOString(), newFetchEnd.toISOString());
+
+      const timeMin = newFetchStart.toISOString();
+      const timeMax = newFetchEnd.toISOString();
+      let allFetchesSuccessful = true;
+
+      for (const account of accounts.value) {
+        console.log(`AuthStore: Processing account ${account.user.email} (${account.id})`);
+        // Check if token is expired for this account
+        if (account.expiresAt <= Date.now() + 5 * 1000) { // 5 seconds buffer
+          console.warn(`AuthStore: Access token for account ${account.user.email} is expired. Skipping event fetch.`);
+          account.events = []; // Clear events for expired token
+          // In a real app, you would attempt to refresh the token here.
+          allFetchesSuccessful = false; // Considered a failure for this account
+          continue;
+        }
+
+        try {
+          const accountEvents = await getUpcomingEvents(account.accessToken, timeMin, timeMax);
+          console.log(`AuthStore: Fetched ${accountEvents.length} events for account ${account.user.email}.`);
+          // Augment events with account ID and color before storing
+          account.events = accountEvents.map((event: any) => ({
+            ...event,
+            accountId: account.id,
+            accountColor: account.color,
+          }));
+        } catch (error) {
+          console.error(`AuthStore: Failed to fetch events for account ${account.user.email}:`, error);
+          account.events = []; // Clear events for failed fetch
+          allFetchesSuccessful = false;
+        }
+      }
+
+      if (allFetchesSuccessful) {
+        fetchRangeStart.value = newFetchStart;
+        fetchRangeEnd.value = newFetchEnd;
+      }
+      console.log('AuthStore: fetchUpcomingEvents completed. Total events in accounts:', accounts.value.reduce((sum, acc) => sum + acc.events.length, 0));
+    } finally {
+      isFetchingEvents.value = false;
+    }
   }
 
   function setToken(accessToken: string, expires_in: number, user_id: string, user_data: any) {
@@ -176,6 +213,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('google_accounts');
     localStorage.removeItem('active_google_account_id');
     // Keep '24_hour_format' as it's a general setting, not account-specific
+    fetchRangeStart.value = null;
+    fetchRangeEnd.value = null;
   }
 
   function removeAccount(accountId: string) {
@@ -203,12 +242,21 @@ export const useAuthStore = defineStore('auth', () => {
     if (savedAccounts) {
       const parsedAccounts: GoogleAccount[] = JSON.parse(savedAccounts);
       console.log('AuthStore: Loaded accounts from localStorage:', parsedAccounts);
-      const nonExpiredAccounts = parsedAccounts.filter(account => account.expiresAt > Date.now() + 5 * 1000); // Filter out expired tokens
-      if (parsedAccounts.length !== nonExpiredAccounts.length) {
-        console.warn('AuthStore: Some accounts were filtered out due to expired tokens.');
-      }
 
-      accounts.value = nonExpiredAccounts;
+      // --- Start of change: Proactively clean invalid data ---
+      const initialCount = parsedAccounts.length;
+      const validAccounts = parsedAccounts
+        .filter(account => account.expiresAt > Date.now() + 5 * 1000) // Filter out expired tokens
+        .filter(account => account.user && typeof account.user.error === 'undefined'); // Filter out accounts with user error object
+
+      if (validAccounts.length < initialCount) {
+        console.warn('AuthStore: Removed invalid or expired accounts from storage.');
+        // Update localStorage with the cleaned list to prevent this issue on next load
+        localStorage.setItem('google_accounts', JSON.stringify(validAccounts));
+      }
+      // --- End of change ---
+
+      accounts.value = validAccounts;
       if (savedActiveAccountId && accounts.value.some(acc => acc.id === savedActiveAccountId)) {
         activeAccountId.value = savedActiveAccountId;
         console.log('AuthStore: Active account restored:', activeAccountId.value);
@@ -241,6 +289,7 @@ export const useAuthStore = defineStore('auth', () => {
     accounts,           // Expose the accounts array
     activeAccountId,    // Expose the active account ID
     isLoggedIn,
+    isFetchingEvents,
     upcomingEvents,
     fetchUpcomingEvents,
     setToken,
