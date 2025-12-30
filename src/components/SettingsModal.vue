@@ -19,8 +19,7 @@ function initializeGsi() {
         tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
-          prompt: 'consent', // Request consent for offline access
-                      callback: async (tokenResponse) => {
+          callback: async (tokenResponse) => {
                       if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
                         // Fetch user profile
                         const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -34,7 +33,8 @@ function initializeGsi() {
                         // Fetch upcoming events after login (for all accounts)
                         await authStore.fetchUpcomingEvents();
                       }
-                    },        });
+                    },
+        });
         resolve();
       } else {
         reject(new Error("Google GSI script not loaded."));

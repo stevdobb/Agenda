@@ -25,12 +25,14 @@ onMounted(() => {
 })
 
 // Watch for changes in currentDate and refetch events
-watch(() => [currentDate.value, currentView.value] as const, async ([newDate, newView], oldValues) => {
-  const [oldDate, oldView] = oldValues || [undefined, undefined];
-  if (!authStore.isLoggedIn) return; // Only fetch if logged in
+watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView], oldValues) => {
+  const [wasLoggedIn, oldDate, oldView] = oldValues || [false, undefined, undefined];
+  if (!isLoggedIn) return; // Only fetch if logged in
+
+  const justLoggedIn = isLoggedIn && !wasLoggedIn;
 
   // Determine if a re-fetch is necessary
-  const shouldRefetch = !oldDate || newView !== oldView || // View changed
+  const shouldRefetch = justLoggedIn || !oldDate || newView !== oldView || // View changed
                        (newDate instanceof Date && oldDate instanceof Date && (
                          newDate.getMonth() !== oldDate.getMonth() || // Month changed
                          newDate.getFullYear() !== oldDate.getFullYear() // Year changed
