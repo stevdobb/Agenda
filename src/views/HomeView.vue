@@ -9,6 +9,7 @@ import MonthView from '@/components/MonthView.vue'
 import { PlusIcon, CalendarDaysIcon, TrashIcon, Cog6ToothIcon, CheckBadgeIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent } from '@/services/googleCalendar'
+import { requestAccessToken } from '@/services/gsiService'
 
 const authStore = useAuthStore()
 const todoStore = useTodoStore() // Instantiate Todo store
@@ -26,69 +27,46 @@ onMounted(() => {
 
 // Watch for changes in currentDate and refetch events
 watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView], oldValues) => {
-  const [wasLoggedIn, oldDate, oldView] = oldValues || [false, undefined, undefined];
-  if (!isLoggedIn) return; // Only fetch if logged in
+  const [wasLoggedIn] = oldValues || [false];
+  if (!isLoggedIn) return;
 
-  const justLoggedIn = isLoggedIn && !wasLoggedIn;
-
-  // Determine if a re-fetch is necessary
-  const shouldRefetch = justLoggedIn || !oldDate || newView !== oldView || // View changed
-                       (newDate instanceof Date && oldDate instanceof Date && (
-                         newDate.getMonth() !== oldDate.getMonth() || // Month changed
-                         newDate.getFullYear() !== oldDate.getFullYear() // Year changed
-                       ));
-  
-  if (!shouldRefetch) {
-    return; // No need to re-fetch if no significant change
+  // Initial login fetches a wide range, subsequent view/date changes fetch specific ranges
+  if (wasLoggedIn) {
+    const { fetchStart, fetchEnd } = getFetchRangeForView(newView, newDate);
+    await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
   }
+}, { immediate: true })
 
-  // Determine the range to fetch based on the current view
+
+function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
   let fetchStart: Date;
   let fetchEnd: Date;
+  const today = new Date();
 
-  const today = new Date(); // Use today for default list view range
-
-  if (newView === 'list') {
-    // Fetch events from today onwards for one year
+  if (view === 'list') {
     fetchStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    fetchStart.setHours(0, 0, 0, 0); // Start of today
-
-    fetchEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7); // 7 days from today
-  } else if (newView === 'week') {
-    // Fetch events for the current week + a buffer of 2 weeks on each side
-    const startOfWeek = new Date(newDate);
-    startOfWeek.setDate(newDate.getDate() - newDate.getDay() + (newDate.getDay() === 0 ? -6 : 1)); // Start of week (Monday)
+    fetchStart.setHours(0, 0, 0, 0);
+    fetchEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+  } else if (view === 'week') {
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay() + (date.getDay() === 0 ? -6 : 1));
     startOfWeek.setHours(0, 0, 0, 0);
-
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Sunday)
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
-
     fetchStart = new Date(startOfWeek);
-    fetchStart.setDate(startOfWeek.getDate() - 7 * 2); // 2 weeks before
+    fetchStart.setDate(startOfWeek.getDate() - 7 * 2);
     fetchEnd = new Date(endOfWeek);
-    fetchEnd.setDate(endOfWeek.getDate() + 7 * 2); // 2 weeks after
-
-  } else if (newView === 'month') {
-    // Fetch events for the current month + a buffer of 1 month on each side
-    const startOfMonth = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
+    fetchEnd.setDate(endOfWeek.getDate() + 7 * 2);
+  } else { // month view
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
-
-    const endOfMonth = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0);
-    endOfMonth.setHours(23, 59, 59, 999);
-
     fetchStart = new Date(startOfMonth);
-    fetchStart.setMonth(startOfMonth.getMonth() - 1); // 1 month before
-    fetchEnd = new Date(newDate.getFullYear(), newDate.getMonth() + 2, 0);
-
-  } else {
-    // Fallback for unknown view, use default list range
-    fetchStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    fetchEnd = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+    fetchStart.setMonth(startOfMonth.getMonth() - 1);
+    fetchEnd = new Date(date.getFullYear(), date.getMonth() + 2, 0);
   }
-  
-  await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
-}, { immediate: true }) // immediate: true to run on initial mount as well
+  return { fetchStart, fetchEnd };
+}
 
 
 // Helper to format date and time
@@ -293,10 +271,8 @@ function manualFetchEvents() {
     feedbackMessage.value = '❌ Please log in to refresh events.';
     return;
   }
-  // Trigger a re-fetch of events based on the current view and date
-  // The watch effect on currentDate and currentView will handle the range calculation.
-  // We can force a re-fetch by calling the store action directly.
-  authStore.fetchUpcomingEvents();
+  const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value);
+  authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
   feedbackMessage.value = '✅ Events refreshed.';
 }
 
@@ -312,6 +288,10 @@ function isEventToday(event: any): boolean {
 
   // Compare year, month, and day for equality in local time
   return eventDate.getTime() === today.getTime();
+}
+
+function handleLogin() {
+  requestAccessToken();
 }
 </script>
 
@@ -436,6 +416,18 @@ function isEventToday(event: any): boolean {
         <div v-if="currentView === 'month' && authStore.isLoggedIn" class="mt-8">
           <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" @dayClicked="handleMonthDayClick" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
         </div>
+      </div>
+      <div v-else class="text-center py-12">
+        <h2 class="text-xl font-semibold mb-4 dark:text-white">Welcome to Natural Agenda</h2>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">
+          Please log in with your Google account to connect your calendar and see your events.
+        </p>
+        <button
+          @click="handleLogin"
+          class="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center mx-auto transition"
+        >
+          Login with Google
+        </button>
       </div>
     </div>
     <InstallButton />

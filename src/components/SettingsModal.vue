@@ -1,105 +1,17 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { XMarkIcon, SunIcon, MoonIcon, ClockIcon, ArrowRightEndOnRectangleIcon, PlusIcon } from '@heroicons/vue/24/solid'
+import { requestAccessToken } from '@/services/gsiService';
 
 const authStore = useAuthStore()
 
 const emit = defineEmits(['close'])
 
-// IMPORTANT: Replace with your actual Google Client ID
-const GOOGLE_CLIENT_ID = '350064938484-i5mqo80eieq2e966i10kus824r4p7pmc.apps.googleusercontent.com'
-
-let tokenClient: google.accounts.oauth2.TokenClient | undefined;
-
-// Function to initialize the Google GIS client
-function initializeGsi() {
-  return new Promise<void>((resolve, reject) => {
-    try {
-      if (window.google) {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-                                callback: async (tokenResponse) => {
-                                  if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
-                                    try {
-                                      // Fetch user profile
-                                      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                                        headers: {
-                                          'Authorization': `Bearer ${tokenResponse.access_token}`
-                                        }
-                                      });
-          
-                                      if (!response.ok) {
-                                        const errorData = await response.json().catch(() => ({})); // Catch if response is not json
-                                        throw new Error(`Failed to fetch user profile: ${errorData.error_description || response.statusText}`);
-                                      }
-          
-                                      const userinfo = await response.json();
-          
-                                      if (!userinfo.sub) {
-                                        throw new Error("User ID (sub) not found in user profile response.");
-                                      }
-                                      
-                                      // Pass user_id (from sub claim) and userinfo to setToken
-                                      authStore.setToken(tokenResponse.access_token, Number(tokenResponse.expires_in), userinfo.sub, userinfo)
-                                      // Fetch upcoming events after login (for all accounts)
-                                      await authStore.fetchUpcomingEvents();
-                                    } catch (error: any) {
-                                      console.error("Login failed:", error);
-                                      alert(`Login failed: ${error.message}`);
-                                      // Consider a more robust cleanup if needed
-                                      // authStore.clearAuth(); 
-                                    }
-                                  }
-                                },        });
-        resolve();
-      } else {
-        reject(new Error("Google GSI script not loaded."));
-      }
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-async function handleLogin(isAddAnother: boolean = false) { // Add isAddAnother parameter
-  const checkAndInitialize = () => {
-    return new Promise<void>((resolve, reject) => {
-      let attempts = 0;
-      const interval = setInterval(async () => {
-        if (window.google) {
-          clearInterval(interval);
-          try {
-            await initializeGsi();
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        } else {
-          attempts++;
-          if (attempts > 20) { // Stop after 10 seconds (20 * 500ms)
-            clearInterval(interval);
-            reject(new Error("Failed to load Google's authentication script. Please check your connection and try again."));
-          }
-        }
-      }, 500);
-    });
-  };
-
-  try {
-    if (!tokenClient) {
-      await checkAndInitialize();
-    }
-    // Modify requestAccessToken call
-    if (isAddAnother) {
-      tokenClient?.requestAccessToken({ prompt: 'select_account' });
-    } else {
-      tokenClient?.requestAccessToken();
-    }
-  } catch (error) {
-    console.error(error);
-    // You could show this error to the user in the UI
-    alert((error as Error).message);
+function handleLogin(isAddAnother: boolean = false) {
+  if (isAddAnother) {
+    requestAccessToken({ prompt: 'select_account' });
+  } else {
+    requestAccessToken();
   }
 }
 

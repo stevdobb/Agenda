@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { computed } from 'vue'
 import { getUpcomingEvents } from '@/services/googleCalendar'
+import { requestAccessToken } from '@/services/gsiService'
 
 interface GoogleAccount {
   id: string; // Unique ID for the account (e.g., Google user ID from 'sub' claim)
@@ -32,7 +33,6 @@ export const useAuthStore = defineStore('auth', () => {
   const is24HourFormat = ref(true) // Default to 24-hour format
   const fetchRangeStart = ref<Date | null>(null) // Start of the currently fetched event range
   const fetchRangeEnd = ref<Date | null>(null) // End of the currently fetched event range
-
   const isFetchingEvents = ref(false); // To prevent race conditions
 
   const upcomingEvents = computed(() => {
@@ -82,7 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('24_hour_format', JSON.stringify(is24HourFormat.value))
   }
 
-  async function fetchUpcomingEvents(startDate?: Date, endDate?: Date) {
+  async function fetchUpcomingEvents(startDate?: Date, endDate?: Date, force: boolean = false) {
     if (isFetchingEvents.value) {
       console.warn('AuthStore: An event fetch is already in progress. Skipping.');
       return;
@@ -108,8 +108,14 @@ export const useAuthStore = defineStore('auth', () => {
         effectiveEndDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()); // One year from today
       }
 
+      // If forcing, clear the existing range to ensure a fresh fetch of the desired range
+      if (force) {
+        fetchRangeStart.value = null;
+        fetchRangeEnd.value = null;
+      }
+
       // --- Start of change: Prevent re-fetching contained ranges ---
-      if (fetchRangeStart.value && fetchRangeEnd.value && effectiveStartDate >= fetchRangeStart.value && effectiveEndDate <= fetchRangeEnd.value) {
+      if (!force && fetchRangeStart.value && fetchRangeEnd.value && effectiveStartDate >= fetchRangeStart.value && effectiveEndDate <= fetchRangeEnd.value) {
         console.log('AuthStore: Event range is already covered. Skipping fetch.');
         return;
       }
@@ -240,23 +246,34 @@ export const useAuthStore = defineStore('auth', () => {
     const format24Hour = localStorage.getItem('24_hour_format');
 
     if (savedAccounts) {
-      const parsedAccounts: GoogleAccount[] = JSON.parse(savedAccounts);
+      let parsedAccounts: GoogleAccount[] = [];
+      try {
+        parsedAccounts = JSON.parse(savedAccounts);
+      } catch (e) {
+        console.error("Failed to parse accounts from localStorage", e);
+        localStorage.removeItem('google_accounts');
+        return;
+      }
+
       console.log('AuthStore: Loaded accounts from localStorage:', parsedAccounts);
 
-      // --- Start of change: Proactively clean invalid data ---
       const initialCount = parsedAccounts.length;
-      const validAccounts = parsedAccounts
-        .filter(account => account.expiresAt > Date.now() + 5 * 1000) // Filter out expired tokens
-        .filter(account => account.user && typeof account.user.error === 'undefined'); // Filter out accounts with user error object
+      const stillValidAccounts = parsedAccounts.filter(account => account.user && typeof account.user.error === 'undefined');
+      const expiredAccounts = stillValidAccounts.filter(account => account.expiresAt <= Date.now() + 5000);
+      const activeAndValidAccounts = stillValidAccounts.filter(account => account.expiresAt > Date.now() + 5000);
 
-      if (validAccounts.length < initialCount) {
-        console.warn('AuthStore: Removed invalid or expired accounts from storage.');
-        // Update localStorage with the cleaned list to prevent this issue on next load
-        localStorage.setItem('google_accounts', JSON.stringify(validAccounts));
+      if (stillValidAccounts.length < initialCount) {
+        console.warn('AuthStore: Removed invalid accounts from storage.');
+        localStorage.setItem('google_accounts', JSON.stringify(stillValidAccounts));
       }
-      // --- End of change ---
 
-      accounts.value = validAccounts;
+      accounts.value = activeAndValidAccounts;
+
+      if (expiredAccounts.length > 0) {
+        console.log(`AuthStore: ${expiredAccounts.length} account(s) have expired tokens. Attempting silent refresh...`);
+        requestAccessToken();
+      }
+      
       if (savedActiveAccountId && accounts.value.some(acc => acc.id === savedActiveAccountId)) {
         activeAccountId.value = savedActiveAccountId;
         console.log('AuthStore: Active account restored:', activeAccountId.value);

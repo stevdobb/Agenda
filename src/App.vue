@@ -2,11 +2,13 @@
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { initializeGsi } from './services/gsiService'
 
 
 const authStore = useAuthStore()
 
 onMounted(() => {
+  initializeGsi();
   authStore.checkAuth()
   authStore.checkDarkMode()
 })
