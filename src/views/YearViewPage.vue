@@ -10,11 +10,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
+import { parseIcsContent, type ParsedIcsEvent } from '@/services/icsService' // New: Import ICS service
 
 // import type { DateRange } from 'radix-vue' // Import DateRange type
 
 const store = useCalendarStore()
 const importFile = ref<HTMLInputElement | null>(null)
+const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
 const showConfirmModal = ref(false)
 
 // const selectedDateRange = ref<DateRange | undefined>(undefined) // Reactive state for selected date range
@@ -42,6 +44,10 @@ function triggerImport() {
     importFile.value?.click()
 }
 
+function triggerIcsImport() { // New: Trigger for ICS import
+  importIcsFile.value?.click()
+}
+
 function importData(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
@@ -58,6 +64,52 @@ function importData(event: Event) {
       }
     } catch (error) {
       alert('Fout bij het lezen van het bestand.')
+      console.error(error)
+    }
+  }
+  reader.readAsText(file)
+}
+
+async function importIcsData(event: Event) { // New: Handle ICS file import
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const icsContent = e.target?.result as string
+      
+      const parsedEvents = parseIcsContent(icsContent)
+
+      // Ensure a default event type for ICS events exists
+      const icsEventType = store.eventTypes.find(t => t.name === 'ICS Event')
+      if (!icsEventType) {
+        store.addEventType({ name: 'ICS Event', color: '#888888' }) // Add a default grey color
+      }
+      // Re-find to ensure it's available after potential addition
+      const finalIcsEventType = store.eventTypes.find(t => t.name === 'ICS Event')
+
+      if (finalIcsEventType) {
+        parsedEvents.forEach((icsEvent: ParsedIcsEvent) => {
+            store.addEvent({
+                startDate: icsEvent.startDate,
+                endDate: icsEvent.endDate,
+                type: icsEvent.summary, // Use ICS summary as type for specific naming
+                color: finalIcsEventType.color // Use the color of the generic ICS Event type
+            })
+        })
+        alert(`${parsedEvents.length} events from ICS imported!`)
+      } else {
+          alert('Could not find or create "ICS Event" type.')
+      }
+
+      // Clear the file input value to allow re-importing the same file
+      if (importIcsFile.value) {
+        importIcsFile.value.value = '';
+      }
+
+    } catch (error) {
+      alert('Fout bij het lezen of parsen van het ICS-bestand.')
       console.error(error)
     }
   }
@@ -125,10 +177,12 @@ function handleRestart() {
           </CardHeader>
           <CardContent class="flex flex-wrap gap-4">
             <Button @click="exportData">Export</Button>
-            <Button @click="triggerImport" variant="outline">Import</Button>
+            <Button @click="triggerImport" variant="outline">Import JSON</Button>
+            <Button @click="triggerIcsImport" variant="outline">Import ICS</Button>
             <Button @click="showConfirmModal = true" variant="destructive">Restart</Button>
             <Button @click="printView">Print Year View</Button>
             <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
+            <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
           </CardContent>
         </Card>
       </div>
