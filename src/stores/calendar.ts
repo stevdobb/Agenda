@@ -50,9 +50,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     eventTypes.value = defaultEventTypes
   }
 
-  if (storedHiddenTypes) {
-    hiddenEventTypes.value = new Set(JSON.parse(storedHiddenTypes))
-  }
+
 
   if (!storedEvents && !storedTypes) {
     const currentYear = new Date().getFullYear()

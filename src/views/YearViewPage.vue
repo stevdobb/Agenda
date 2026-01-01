@@ -89,7 +89,6 @@ function handleRestart() {
     <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <div class="lg:col-span-2 flex flex-col gap-8">
         <EventEditor />
-        <EventList /> <!-- New EventList component -->
       </div>
       <div class="lg:col-span-1 flex flex-col gap-8">
         <PrintLegend />
@@ -140,6 +139,10 @@ function handleRestart() {
       <div class="mt-8 print-only print-legend-container">
         <PrintLegend />
       </div>
+    </div>
+    <!-- New position for EventList -->
+    <div class="mt-8">
+      <EventList />
     </div>
   </div>
 </template>

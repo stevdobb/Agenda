@@ -42,6 +42,16 @@ const months = computed(() => {
   })
 })
 
+const yearlyEvents = computed(() => {
+  const year = currentYear.value;
+  return store.events
+    .filter(event => {
+      const eventYear = new Date(event.startDate).getFullYear();
+      return eventYear === year && !store.hiddenEventTypes.has(event.type);
+    })
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+});
+
 const weekDays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
 function prevYear() {
@@ -64,6 +74,20 @@ function nextYear() {
         <ChevronRightIcon class="h-4 w-4" />
       </Button>
     </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      <div v-for="type in store.eventTypes" :key="type.name" class="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          :id="`checkbox-${type.name}`"
+          :checked="!store.hiddenEventTypes.has(type.name)"
+          @change="store.toggleEventTypeVisibility(type.name)"
+          class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
+        />
+        <label :for="`checkbox-${type.name}`" class="text-sm font-medium text-gray-700">{{ type.name }}</label>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       <Card v-for="month in months" :key="month.name">
         <CardHeader>
