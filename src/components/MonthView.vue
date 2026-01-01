@@ -129,7 +129,7 @@ function isToday(date: Date | null) {
         v-for="(day, index) in calendarDays"
         :key="index"
         :class="[
-          'relative h-24 p-1 rounded-md overflow-hidden',
+          'relative h-32 p-1 rounded-md overflow-hidden',
           day ? 'bg-gray-50 dark:bg-gray-700 cursor-pointer' : 'bg-gray-200 dark:bg-gray-800',
           isToday(day) ? 'border-2 border-blue-500' : 'border border-gray-200 dark:border-gray-600'
         ]"

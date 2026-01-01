@@ -31,8 +31,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => accounts.value.length > 0)
   const isDarkMode = ref(false)
   const is24HourFormat = ref(true) // Default to 24-hour format
-  const fetchRangeStart = ref<Date | null>(null) // Start of the currently fetched event range
-  const fetchRangeEnd = ref<Date | null>(null) // End of the currently fetched event range
   const isFetchingEvents = ref(false); // To prevent race conditions
 
   const upcomingEvents = computed(() => {
@@ -109,33 +107,33 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       // If forcing, clear the existing range to ensure a fresh fetch of the desired range
+      // Note: Range tracking is currently disabled
       if (force) {
-        fetchRangeStart.value = null;
-        fetchRangeEnd.value = null;
+        // fetchRangeStart.value = null;
+        // fetchRangeEnd.value = null;
       }
 
       // --- Start of change: Prevent re-fetching contained ranges ---
-      if (!force && fetchRangeStart.value && fetchRangeEnd.value && effectiveStartDate >= fetchRangeStart.value && effectiveEndDate <= fetchRangeEnd.value) {
-        console.log('AuthStore: Event range is already covered. Skipping fetch.');
-        return;
-      }
+      // if (!force && fetchRangeStart.value && fetchRangeEnd.value && effectiveStartDate >= fetchRangeStart.value && effectiveEndDate <= fetchRangeEnd.value) {
+      //   console.log('AuthStore: Event range is already covered. Skipping fetch.');
+      //   return;
+      // }
 
-      // Expand the fetch range instead of replacing it
-      let newFetchStart = effectiveStartDate;
-      if (fetchRangeStart.value) {
-        newFetchStart = new Date(Math.min(newFetchStart.getTime(), fetchRangeStart.value.getTime()));
-      }
-      let newFetchEnd = effectiveEndDate;
-      if (fetchRangeEnd.value) {
-        newFetchEnd = new Date(Math.max(newFetchEnd.getTime(), fetchRangeEnd.value.getTime()));
-      }
+      // // Expand the fetch range instead of replacing it
+      // let newFetchStart = effectiveStartDate;
+      // if (fetchRangeStart.value) {
+      //   newFetchStart = new Date(Math.min(newFetchStart.getTime(), fetchRangeStart.value.getTime()));
+      // }
+      // let newFetchEnd = effectiveEndDate;
+      // if (fetchRangeEnd.value) {
+      //   newFetchEnd = new Date(Math.max(newFetchEnd.getTime(), fetchRangeEnd.value.getTime()));
+      // }
       // --- End of change ---
 
-      console.log('AuthStore: Fetching events for range:', newFetchStart.toISOString(), newFetchEnd.toISOString());
+      console.log('AuthStore: Fetching events for range:', effectiveStartDate.toISOString(), effectiveEndDate.toISOString());
 
-      const timeMin = newFetchStart.toISOString();
-      const timeMax = newFetchEnd.toISOString();
-      let allFetchesSuccessful = true;
+      const timeMin = effectiveStartDate.toISOString();
+      const timeMax = effectiveEndDate.toISOString();
 
       for (const account of accounts.value) {
         console.log(`AuthStore: Processing account ${account.user.email} (${account.id})`);
@@ -144,7 +142,6 @@ export const useAuthStore = defineStore('auth', () => {
           console.warn(`AuthStore: Access token for account ${account.user.email} is expired. Skipping event fetch.`);
           account.events = []; // Clear events for expired token
           // In a real app, you would attempt to refresh the token here.
-          allFetchesSuccessful = false; // Considered a failure for this account
           continue;
         }
 
@@ -160,14 +157,13 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (error) {
           console.error(`AuthStore: Failed to fetch events for account ${account.user.email}:`, error);
           account.events = []; // Clear events for failed fetch
-          allFetchesSuccessful = false;
         }
       }
 
-      if (allFetchesSuccessful) {
-        fetchRangeStart.value = newFetchStart;
-        fetchRangeEnd.value = newFetchEnd;
-      }
+      // if (allFetchesSuccessful) {
+      //   fetchRangeStart.value = newFetchStart;
+      //   fetchRangeEnd.value = newFetchEnd;
+      // }
       console.log('AuthStore: fetchUpcomingEvents completed. Total events in accounts:', accounts.value.reduce((sum, acc) => sum + acc.events.length, 0));
     } finally {
       isFetchingEvents.value = false;
@@ -219,8 +215,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('google_accounts');
     localStorage.removeItem('active_google_account_id');
     // Keep '24_hour_format' as it's a general setting, not account-specific
-    fetchRangeStart.value = null;
-    fetchRangeEnd.value = null;
   }
 
   function removeAccount(accountId: string) {
@@ -318,8 +312,6 @@ export const useAuthStore = defineStore('auth', () => {
     toggleDarkMode,
     is24HourFormat,
     toggle24HourFormat,
-    fetchRangeStart,
-    fetchRangeEnd,
     removeAccount,
   }
 })
