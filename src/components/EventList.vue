@@ -3,10 +3,12 @@
 import { useCalendarStore, type CalendarEvent } from '@/stores/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { TrashIcon } from 'lucide-vue-next'
+import { TrashIcon, PencilIcon } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 const store = useCalendarStore()
+
+const emit = defineEmits(['editEvent'])
 
 const sortedEvents = computed(() => {
     return [...store.events].sort((a, b) => {
@@ -50,9 +52,14 @@ function formatEventDates(event: CalendarEvent): string {
               <p class="text-sm text-muted-foreground">{{ formatEventDates(event) }}</p>
             </div>
           </div>
-          <Button variant="destructive" size="icon" @click="deleteEvent(event.id)">
-            <TrashIcon class="h-4 w-4" />
-          </Button>
+          <div class="flex items-center gap-2">
+            <Button variant="outline" size="icon" @click="emit('editEvent', event.id)">
+              <PencilIcon class="h-4 w-4" />
+            </Button>
+            <Button variant="destructive" size="icon" @click="deleteEvent(event.id)">
+              <TrashIcon class="h-4 w-4" />
+            </Button>
+          </div>
         </li>
       </ul>
     </CardContent>

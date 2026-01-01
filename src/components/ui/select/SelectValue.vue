@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { type HTMLAttributes, computed } from 'vue'
-import { SelectValue, type SelectValueProps } from 'radix-vue'
-import { cn } from '@/lib/utils'
+// import { type HTMLAttributes, computed } from 'vue'
+// import { SelectValue, type SelectValueProps } from 'radix-vue'
+// import { cn } from '@/lib/utils'
 
-const props = defineProps<SelectValueProps & { class?: HTMLAttributes['class'] }>()
+// const props = defineProps<SelectValueProps & { class?: HTMLAttributes['class'] }>()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
+// const delegatedProps = computed(() => {
+//   const { class: _, ...delegated } = props
 
-  return delegated
-})
+//   return delegated
+// })
 </script>
 
+<!--
 <template>
   <SelectValue v-bind="delegatedProps" :class="cn('text-sm', props.class)" />
 </template>
+-->

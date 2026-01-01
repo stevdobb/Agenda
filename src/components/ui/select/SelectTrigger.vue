@@ -1,25 +1,26 @@
 <script setup lang="ts">
-import { type HTMLAttributes, computed } from 'vue'
-import {
-  SelectIcon,
-  SelectTrigger,
-  type SelectTriggerProps,
-  useForwardProps,
-} from 'radix-vue'
-import { ChevronDown } from 'lucide-vue-next'
-import { cn } from '@/lib/utils'
+// import { type HTMLAttributes, computed } from 'vue'
+// import {
+//   SelectIcon,
+//   SelectTrigger,
+//   type SelectTriggerProps,
+//   useForwardProps,
+// } from 'radix-vue'
+// import { ChevronDown } from 'lucide-vue-next'
+// import { cn } from '@/lib/utils'
 
-const props = defineProps<SelectTriggerProps & { class?: HTMLAttributes['class'] }>()
+// const props = defineProps<SelectTriggerProps & { class?: HTMLAttributes['class'] }>()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
+// const delegatedProps = computed(() => {
+//   const { class: _, ...delegated } = props
 
-  return delegated
-})
+//   return delegated
+// })
 
-const forwardedProps = useForwardProps(delegatedProps)
+// const forwardedProps = useForwardProps(delegatedProps)
 </script>
 
+<!--
 <template>
   <SelectTrigger
     v-bind="forwardedProps"
@@ -34,3 +35,4 @@ const forwardedProps = useForwardProps(delegatedProps)
     </SelectIcon>
   </SelectTrigger>
 </template>
+-->

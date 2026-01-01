@@ -7,12 +7,34 @@ import PrintLegend from '@/components/PrintLegend.vue'
 import EventList from '@/components/EventList.vue' // Import the new component
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+// import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
+import { calculateWorkingDays } from '@/lib/utils' // Import calculateWorkingDays
+import { getBelgianHolidays } from '@/services/holidayService' // Import getBelgianHolidays
+// import type { DateRange } from 'radix-vue' // Import DateRange type
 
 const store = useCalendarStore()
 const importFile = ref<HTMLInputElement | null>(null)
 const showConfirmModal = ref(false)
+
+// const selectedDateRange = ref<DateRange | undefined>(undefined) // Reactive state for selected date range
+
+const belgianHolidays = computed(() => {
+  const year = new Date().getFullYear() // Assuming current year for holidays
+  return getBelgianHolidays(year).map(holiday => holiday.date)
+})
+
+// const calculatedLeaveDays = computed(() => {
+//   if (selectedDateRange.value?.start && selectedDateRange.value?.end) {
+//     return calculateWorkingDays(
+//       selectedDateRange.value.start,
+//       selectedDateRange.value.end,
+//       belgianHolidays.value
+//     )
+//   }
+//   return 0
+// })
 
 function printView() {
   window.print()
@@ -93,6 +115,14 @@ function handleRestart() {
             <CardTitle>Leave Days</CardTitle>
           </CardHeader>
           <CardContent>
+            <div class="flex flex-col space-y-4">
+              <!-- <DatePickerRange v-model="selectedDateRange" /> -->
+              <!-- <div class="flex justify-between py-1">
+                <span>Calculated Leave Days:</span>
+                <span class="font-semibold">{{ calculatedLeaveDays }}</span>
+              </div> -->
+            </div>
+            <!-- Original leave day stats, can be removed or repurposed if not needed -->
             <div class="flex justify-between py-1">
               <span>Total:</span>
               <span class="font-semibold">{{ store.leaveDayStats.total }}</span>
@@ -130,6 +160,7 @@ function handleRestart() {
     </div>
   </div>
 </template>
+
 
 <style>
 .print-only {

@@ -1,21 +1,47 @@
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useCalendarStore, type EventType } from '@/stores/calendar'
+import { ref, watch } from 'vue'
+import { useCalendarStore, type EventType, type CalendarEvent } from '@/stores/calendar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import DatePickerRange from '@/components/DatePickerRange.vue'
 
 const store = useCalendarStore()
 
+const props = defineProps<{
+  initialEvent?: CalendarEvent | null
+}>()
+
+const emit = defineEmits(['saveEvent', 'cancelEdit'])
+
 const startDate = ref('')
 const endDate = ref('')
-const selectedType = ref(store.eventTypes[0]?.name || '')
+const selectedType = ref('')
 const customTypeName = ref('')
 const customTypeColor = ref('#000000')
 const isCreatingCustomType = ref(false)
+
+// Watch initialEvent to populate form fields
+watch(() => props.initialEvent, (newEvent) => {
+  if (newEvent) {
+    startDate.value = newEvent.startDate
+    endDate.value = newEvent.endDate
+    selectedType.value = newEvent.type
+    // Reset custom type fields
+    isCreatingCustomType.value = false
+    customTypeName.value = ''
+    customTypeColor.value = '#000000'
+  } else {
+    // Reset form for new event
+    startDate.value = ''
+    endDate.value = ''
+    selectedType.value = store.eventTypes[0]?.name || ''
+    isCreatingCustomType.value = false
+    customTypeName.value = ''
+    customTypeColor.value = '#000000'
+  }
+}, { immediate: true })
 
 function saveEvent() {
   if (!startDate.value || !endDate.value || !selectedType.value) {
@@ -33,7 +59,6 @@ function saveEvent() {
     store.addEventType(newType)
     eventType = newType
     
-    // Reset custom type fields
     customTypeName.value = ''
     customTypeColor.value = '#000000'
     isCreatingCustomType.value = false
@@ -45,18 +70,29 @@ function saveEvent() {
       return
   }
 
-
-  store.addEvent({
+  const eventData: Omit<CalendarEvent, 'id'> = {
     startDate: startDate.value,
     endDate: endDate.value,
     type: eventType.name,
     color: eventType.color,
-  })
+  }
 
-  // Reset fields
+  if (props.initialEvent) {
+    // Update existing event
+    emit('saveEvent', { ...eventData, id: props.initialEvent.id })
+  } else {
+    // Create new event
+    emit('saveEvent', eventData)
+  }
+
+  // Reset fields after save/update
   startDate.value = ''
   endDate.value = ''
+  selectedType.value = store.eventTypes[0]?.name || ''
 }
+
+
+
 </script>
 
 <template>
@@ -67,8 +103,12 @@ function saveEvent() {
     <CardContent>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-2">
-          <Label for="date-range">Date Range</Label>
-          <DatePickerRange v-model:start-date="startDate" v-model:end-date="endDate" />
+          <Label for="start-date">Start Date</Label>
+          <Input type="date" id="start-date" v-model="startDate" />
+        </div>
+        <div class="space-y-2">
+          <Label for="end-date">End Date</Label>
+          <Input type="date" id="end-date" v-model="endDate" />
         </div>
         <div class="md:col-span-2 space-y-2">
           <Label for="event-type">Event Type</Label>
@@ -89,8 +129,10 @@ function saveEvent() {
          </div>
       </div>
     </CardContent>
-    <CardFooter class="flex justify-end">
-        <Button @click="saveEvent">Save Event</Button>
+    <CardFooter class="flex justify-end gap-2">
+        <Button v-if="props.initialEvent" variant="outline" @click="emit('cancelEdit')">Cancel</Button>
+        <Button @click="saveEvent">{{ props.initialEvent ? 'Update Event' : 'Save Event' }}</Button>
     </CardFooter>
   </Card>
 </template>
+

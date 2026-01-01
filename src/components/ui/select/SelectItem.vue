@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { type HTMLAttributes, computed } from 'vue'
-import {
-  SelectItem,
-  type SelectItemProps,
-  SelectItemIndicator,
-  SelectItemText,
-  useForwardProps,
-} from 'radix-vue'
-import { Check } from 'lucide-vue-next'
-import { cn } from '@/lib/utils'
+// import { type HTMLAttributes, computed } from 'vue'
+// import {
+//   SelectItem,
+//   type SelectItemProps,
+//   SelectItemIndicator,
+//   SelectItemText,
+//   useForwardProps,
+// } from 'radix-vue'
+// import { Check } from 'lucide-vue-next'
+// import { cn } from '@/lib/utils'
 
-const props = defineProps<SelectItemProps & { class?: HTMLAttributes['class'] }>()
+// const props = defineProps<SelectItemProps & { class?: HTMLAttributes['class'] }>()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
+// const delegatedProps = computed(() => {
+//   const { class: _, ...delegated } = props
 
-  return delegated
-})
+//   return delegated
+// })
 
-const forwardedProps = useForwardProps(delegatedProps)
+// const forwardedProps = useForwardProps(delegatedProps)
 </script>
 
+<!--
 <template>
   <SelectItem
     v-bind="forwardedProps"
@@ -40,3 +41,4 @@ const forwardedProps = useForwardProps(delegatedProps)
     </SelectItemText>
   </SelectItem>
 </template>
+-->
