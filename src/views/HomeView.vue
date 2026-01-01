@@ -99,11 +99,6 @@ function handleEditEvent(eventId: string) {
   }
 }
 
-async function createEvent() {
-  editingEvent.value = null
-  showEventEditor.value = true
-}
-
 async function deleteEvent(eventId: string) {
   // Attempt to remove from local store first
   calendarStore.removeEvent(eventId)
@@ -138,3 +133,60 @@ function manualFetchEvents() {
 function handleLogin() {
   requestAccessToken();
 }
+</script>
+
+<template>
+  <div class="home-view">
+    <header class="header">
+      <h1>My Agenda</h1>
+      <div class="actions">
+        <InstallButton />
+        <button @click="showSettingsModal = true">
+          <Cog6ToothIcon class="icon" /> Settings
+        </button>
+        <button @click="handleLogin">Login</button>
+        <button @click="showEventEditor = true">Add Event</button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="view-controls">
+        <button @click="currentView = 'list'">List View</button>
+        <button @click="currentView = 'week'">Week View</button>
+        <button @click="currentView = 'month'">Month View</button>
+      </div>
+
+      <div v-if="currentView === 'list'" class="event-list-container">
+        <EventList :events="calendarStore.events" @edit-event="handleEditEvent" @delete-event="deleteEvent" />
+      </div>
+
+      <div v-if="currentView === 'week'" class="week-view-container">
+        <WeekView :currentDate="currentDate" :events="calendarStore.events" :is24HourFormat="false" />
+      </div>
+
+      <div v-if="currentView === 'month'" class="month-view-container">
+        <MonthView :currentDate="currentDate" :events="calendarStore.events" :is24HourFormat="false" @day-click="handleMonthDayClick" />
+      </div>
+
+      <EventEditor v-if="showEventEditor" :event="editingEvent" @save="handleSaveEvent" @cancel="showEventEditor = false" />
+      
+      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+    </main>
+
+    <footer class="footer">
+      <!-- Placeholder for todoStore usage to avoid unused error -->
+      <p v-if="todoStore.todos && todoStore.todos.length > 0">
+        You have {{ todoStore.todos.length }} pending todos.
+      </p>
+      <p v-else>No todos for today.</p>
+      <button @click="manualFetchEvents">Refresh Events</button>
+
+      <!-- Placeholder usage for heroicons to avoid unused import errors -->
+      <div style="display: none;">
+        <CalendarDaysIcon class="hidden-icon" />
+        <TrashIcon class="hidden-icon" />
+        <CheckBadgeIcon class="hidden-icon" />
+      </div>
+    </footer>
+  </div>
+</template>

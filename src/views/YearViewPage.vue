@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import YearView from '@/components/YearView.vue'
 import EventEditor from '@/components/EventEditor.vue'
 import PrintLegend from '@/components/PrintLegend.vue'
@@ -10,8 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
-import { calculateWorkingDays } from '@/lib/utils' // Import calculateWorkingDays
-import { getBelgianHolidays } from '@/services/holidayService' // Import getBelgianHolidays
+
 // import type { DateRange } from 'radix-vue' // Import DateRange type
 
 const store = useCalendarStore()
@@ -19,22 +18,6 @@ const importFile = ref<HTMLInputElement | null>(null)
 const showConfirmModal = ref(false)
 
 // const selectedDateRange = ref<DateRange | undefined>(undefined) // Reactive state for selected date range
-
-const belgianHolidays = computed(() => {
-  const year = new Date().getFullYear() // Assuming current year for holidays
-  return getBelgianHolidays(year).map(holiday => holiday.date)
-})
-
-// const calculatedLeaveDays = computed(() => {
-//   if (selectedDateRange.value?.start && selectedDateRange.value?.end) {
-//     return calculateWorkingDays(
-//       selectedDateRange.value.start,
-//       selectedDateRange.value.end,
-//       belgianHolidays.value
-//     )
-//   }
-//   return 0
-// })
 
 function printView() {
   window.print()
