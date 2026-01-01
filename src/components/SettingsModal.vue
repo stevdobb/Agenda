@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
+import { useCalendarStore } from '@/stores/calendar' // New: Import Calendar Store
 import { XMarkIcon, SunIcon, MoonIcon, ClockIcon, ArrowRightEndOnRectangleIcon, PlusIcon } from '@heroicons/vue/24/solid'
 import { requestAccessToken } from '@/services/gsiService';
 
 const authStore = useAuthStore()
+const calendarStore = useCalendarStore() // New: Instantiate Calendar Store
 
 const emit = defineEmits(['close'])
 
@@ -60,6 +62,19 @@ const close = () => {
             <input type="checkbox" :checked="authStore.is24HourFormat" @change="authStore.toggle24HourFormat" />
             <span class="slider round"></span>
           </label>
+        </div>
+
+        <!-- Event Type Visibility -->
+        <div class="pt-4 border-t dark:border-gray-700">
+          <h4 class="text-md font-semibold mb-2">Event Type Visibility</h4>
+          <div v-for="eventType in calendarStore.eventTypes" :key="eventType.name"
+               class="flex items-center justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-700 mb-2">
+            <span>{{ eventType.name }}</span>
+            <label class="switch">
+              <input type="checkbox" :checked="!calendarStore.hiddenEventTypes.has(eventType.name)" @change="calendarStore.toggleEventTypeVisibility(eventType.name)" />
+              <span class="slider round"></span>
+            </label>
+          </div>
         </div>
 
         <!-- Connected Accounts Section -->

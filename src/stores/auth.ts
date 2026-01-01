@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { computed } from 'vue'
 import { getUpcomingEvents } from '@/services/googleCalendar'
-import { requestAccessToken } from '@/services/gsiService'
 
 interface GoogleAccount {
   id: string; // Unique ID for the account (e.g., Google user ID from 'sub' claim)
@@ -264,8 +263,8 @@ export const useAuthStore = defineStore('auth', () => {
       accounts.value = activeAndValidAccounts;
 
       if (expiredAccounts.length > 0) {
-        console.log(`AuthStore: ${expiredAccounts.length} account(s) have expired tokens. Attempting silent refresh...`);
-        requestAccessToken();
+        console.log(`AuthStore: ${expiredAccounts.length} account(s) have expired tokens. User will need to manually re-authenticate.`);
+        // requestAccessToken(); // Removed automatic token refresh to prevent popup on load
       }
       
       if (savedActiveAccountId && accounts.value.some(acc => acc.id === savedActiveAccountId)) {
