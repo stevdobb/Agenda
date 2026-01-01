@@ -5,7 +5,7 @@ const GOOGLE_CLIENT_ID = '350064938484-i5mqo80eieq2e966i10kus824r4p7pmc.apps.goo
 let tokenClient: google.accounts.oauth2.TokenClient | undefined;
 
 // This function handles the response from Google after a token is received
-const gisCallback: google.accounts.oauth2.TokenResponseCallback = async (tokenResponse) => {
+const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) => {
   const authStore = useAuthStore();
   if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
     try {

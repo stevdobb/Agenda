@@ -222,7 +222,7 @@ async function createEvent() {
     eventText.value = ''; // Clear input
     
     // Refresh the upcoming events list
-    await authStore.fetchUpcomingEvents();
+    await authStore.fetchUpcomingEvents(undefined, undefined, true);
 
   } catch (error: any) {
     feedbackMessage.value = `❌ Error: ${error.message}`;
@@ -252,7 +252,7 @@ async function deleteEvent(eventId: string) {
     await deleteCalendarEvent(activeAccount.accessToken, eventId);
     feedbackMessage.value = '✅ Event successfully deleted.';
     // Refresh the event list
-    await authStore.fetchUpcomingEvents();
+    await authStore.fetchUpcomingEvents(undefined, undefined, true);
   } catch (error: any) {
     feedbackMessage.value = `❌ Error deleting event: ${error.message}`;
     console.error(error);
@@ -310,6 +310,7 @@ function handleLogin() {
         <button @click="currentView = 'list'" :class="{'bg-blue-500 text-white': currentView === 'list', 'bg-gray-200 dark:bg-gray-700': currentView !== 'list'}" class="px-3 py-1 rounded-md transition">List</button>
         <button @click="currentView = 'week'" :class="{'bg-blue-500 text-white': currentView === 'week', 'bg-gray-200 dark:bg-gray-700': currentView !== 'week'}" class="px-3 py-1 rounded-md transition">Week</button>
         <button @click="currentView = 'month'" :class="{'bg-blue-500 text-white': currentView === 'month', 'bg-gray-200 dark:bg-gray-700': currentView !== 'month'}" class="px-3 py-1 rounded-md transition">Month</button>
+        <router-link to="/year" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Year</router-link>
         <button @click="manualFetchEvents" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Refresh Events</button>
       </div>
     </header>
