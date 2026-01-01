@@ -198,6 +198,7 @@ function handleRestart() {
     line-height: 0.9rem !important;
     margin: 0 !important;
     padding: 0 !important;
+    background-color: var(--tw-bg-opacity, 1) !important; /* Preserve background color */
   }
   .printable-area .rounded-full {
     border-radius: 0 !important; /* Remove rounded corners for days */

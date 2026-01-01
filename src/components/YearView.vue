@@ -22,18 +22,18 @@ const months = computed(() => {
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
     const firstDayOfWeek = (date.getDay() + 6) % 7 // 0=Monday, 6=Sunday
 
-    const days = Array.from({ length: daysInMonth }, (_, i) => {
-      const dayDate = new Date(year, monthIndex, i + 1)
-      const events = store.getEventsForDate(dayDate)
-      // Use the color of the first event for simplicity
-      const bgColor = events.length > 0 ? events[0].color : 'transparent'
-      return {
-        day: i + 1,
-        date: dayDate,
-        bgColor
-      }
-    })
-
+          const days = Array.from({ length: daysInMonth }, (_, i) => {
+            const dayDate = new Date(year, monthIndex, i + 1)
+            const events = store.getEventsForDate(dayDate)
+            // Use the color of the first event for simplicity
+            const bgColor = events.length > 0 ? events[0].color : 'transparent'
+            return {
+              day: i + 1,
+              date: dayDate,
+              bgColor,
+              events // Include the events array
+            }
+          })
     return {
       name,
       days,
@@ -73,15 +73,18 @@ function nextYear() {
           <div class="grid grid-cols-7 gap-2 text-center text-sm">
             <div v-for="day in weekDays" :key="day" class="font-semibold text-muted-foreground">{{ day }}</div>
             <div v-for="blank in month.firstDayOfWeek" :key="'blank-' + blank"></div>
-            <div
-              v-for="day in month.days"
-              :key="day.day"
-              class="w-8 h-8 flex items-center justify-center rounded-full text-sm"
-              :style="{ backgroundColor: day.bgColor, color: day.bgColor !== 'transparent' ? 'white' : 'inherit' }"
-            >
-              {{ day.day }}
-            </div>
-          </div>
+                                                                                  <div
+                                                                                    v-for="day in month.days"
+                                                                                    :key="day.day"
+                                                                                    class="w-8 h-8 flex items-center justify-center rounded-full text-sm cursor-pointer"
+                                                                                    :style="{ backgroundColor: day.bgColor, color: day.bgColor !== 'transparent' ? 'white' : 'inherit' }"
+                                                                                    @click="() => {
+                                                                                      if (day.events && day.events.length > 0) {
+                                                                                        store.selectedEvent = day.events[0];
+                                                                                      }
+                                                                                    }"
+                                                                                  >              {{ day.day }}
+                                                                  </div>          </div>
         </CardContent>
       </Card>
     </div>

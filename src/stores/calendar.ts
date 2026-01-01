@@ -31,6 +31,7 @@ const defaultEventTypes: EventType[] = [
 export const useCalendarStore = defineStore('calendar', () => {
   const events = ref<CalendarEvent[]>([])
   const eventTypes = ref<EventType[]>([])
+  const selectedEvent = ref<CalendarEvent | null>(null) // New: To store the event being edited
 
   // Load from localStorage
   const storedEvents = localStorage.getItem(STORAGE_KEY)
@@ -128,8 +129,9 @@ export const useCalendarStore = defineStore('calendar', () => {
     const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
 
     events.value.forEach(event => {
-      // Only consider 'Verlof' events for leave day calculation
-      if (event.type === 'Verlof') {
+      // Only consider non-'Wettelijke feestdag' events for leave day calculation
+      // 'Wettelijke feestdag' (legal holiday) events are not counted as planned leave days.
+      if (event.type !== 'Wettelijke feestdag') {
         const start = new Date(event.startDate);
         const end = new Date(event.endDate);
         
@@ -159,5 +161,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     setData,
     clearData,
     leaveDayStats,
+    selectedEvent, // New: Return selectedEvent
   }
 })

@@ -53,7 +53,7 @@ function formatEventDates(event: CalendarEvent): string {
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <Button variant="outline" size="icon" @click="emit('editEvent', event.id)">
+            <Button variant="outline" size="icon" @click="store.selectedEvent = event">
               <PencilIcon class="h-4 w-4" />
             </Button>
             <Button variant="destructive" size="icon" @click="deleteEvent(event.id)">
