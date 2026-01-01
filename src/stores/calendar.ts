@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue' // Import computed
 import { getBelgianHolidays } from '@/services/holidayService'
 import { calculateWorkingDays } from '@/lib/utils' // Import calculateWorkingDays
+import { format } from 'date-fns' // Import format from date-fns
 
 export interface CalendarEvent {
   id: string
@@ -15,6 +16,12 @@ export interface CalendarEvent {
 export interface EventType {
   name: string
   color: string
+}
+
+interface RunningRaceData {
+  summary: string
+  dtstart: string
+  dtend: string
 }
 
 const STORAGE_KEY = 'calendarEvents'
@@ -38,7 +45,6 @@ export const useCalendarStore = defineStore('calendar', () => {
   // Load from localStorage
   const storedEvents = localStorage.getItem(STORAGE_KEY)
   const storedTypes = localStorage.getItem(TYPES_STORAGE_KEY)
-  const storedHiddenTypes = localStorage.getItem(HIDDEN_TYPES_STORAGE_KEY)
 
   if (storedEvents) {
     events.value = JSON.parse(storedEvents)
@@ -70,17 +76,17 @@ export const useCalendarStore = defineStore('calendar', () => {
         // Add default running race events from ICS data
         const runningRaceType = defaultEventTypes.find(t => t.name === 'Loopwedstrijd');
         if (runningRaceType) {
-            const runningRaceEventsData = [
-                { summary: 'Loop van de Kust – Zeebrugge', dtstart: '20260703T200000', dtend: '20260703T220000' },
-                { summary: 'Loop van de Kust – Oostende', dtstart: '20260710T193000', dtend: '20260710T213000' },
-                { summary: 'Loop van de Kust – Knokke-Heist', dtstart: '20260712T193000', dtend: '20260712T213000' },
-                { summary: 'Loop van de Kust – Koksijde', dtstart: '20260715T200000', dtend: '20260715T220000' },
-                { summary: 'Loop van de Kust – De Panne', dtstart: '20260727T193000', dtend: '20260727T213000' },
-                { summary: 'Loop van de Kust – Wenduine', dtstart: '20260731T200000', dtend: '20260731T220000' },
-                { summary: 'Loop van de Kust – Blankenberge', dtstart: '20260801T193000', dtend: '20260801T213000' },
-                { summary: 'Loop van de Kust – Nieuwpoort', dtstart: '20260810T193000', dtend: '20260810T213000' },
-                { summary: 'Loop van de Kust – Bredene', dtstart: '20260814T193000', dtend: '20260814T213000' },
-                { summary: 'Loop van de Kust – Middelkerke', dtstart: '20260828T200000', dtend: '20260828T220000' },
+            const runningRaceEventsData: RunningRaceData[] = [
+                // { summary: 'Loop van de Kust – Zeebrugge', dtstart: '20260703T200000', dtend: '20260703T220000' },
+                // { summary: 'Loop van de Kust – Oostende', dtstart: '20260710T193000', dtend: '20260710T213000' },
+                // { summary: 'Loop van de Kust – Knokke-Heist', dtstart: '20260712T193000', dtend: '20260712T213000' },
+                // { summary: 'Loop van de Kust – Koksijde', dtstart: '20260715T200000', dtend: '20260715T220000' },
+                // { summary: 'Loop van de Kust – De Panne', dtstart: '20260727T193000', dtend: '20260727T213000' },
+                // { summary: 'Loop van de Kust – Wenduine', dtstart: '20260731T200000', dtend: '20260731T220000' },
+                // { summary: 'Loop van de Kust – Blankenberge', dtstart: '20260801T193000', dtend: '20260801T213000' },
+                // { summary: 'Loop van de Kust – Nieuwpoort', dtstart: '20260810T193000', dtend: '20260810T213000' },
+                // { summary: 'Loop van de Kust – Bredene', dtstart: '20260814T193000', dtend: '20260814T213000' },
+                // { summary: 'Loop van de Kust – Middelkerke', dtstart: '20260828T200000', dtend: '20260828T220000' },
             ];
 
             const runningRaceEvents: CalendarEvent[] = runningRaceEventsData.map(race => ({
@@ -145,7 +151,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
   
   function getEventsForDate(date: Date) {
-    const dateString = date.toISOString().split('T')[0]
+    const dateString = format(date, 'yyyy-MM-dd')
     return events.value.filter(event => {
       return dateString >= event.startDate && dateString <= event.endDate && !hiddenEventTypes.value.has(event.type)
     })

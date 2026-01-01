@@ -27,8 +27,8 @@ const isCreatingCustomType = ref(false)
 // Watch store.selectedEvent to populate form fields
 watch(() => store.selectedEvent, (newEvent) => {
   if (newEvent) {
-    startDate.value = newEvent.startDate ? new Date(newEvent.startDate).toISOString().split('T')[0] : '';
-    endDate.value = newEvent.endDate ? new Date(newEvent.endDate).toISOString().split('T')[0] : '';
+    startDate.value = newEvent.startDate || '';
+    endDate.value = newEvent.endDate || '';
     selectedType.value = newEvent.type
     // Reset custom type fields
     isCreatingCustomType.value = false

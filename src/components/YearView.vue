@@ -42,16 +42,6 @@ const months = computed(() => {
   })
 })
 
-const yearlyEvents = computed(() => {
-  const year = currentYear.value;
-  return store.events
-    .filter(event => {
-      const eventYear = new Date(event.startDate).getFullYear();
-      return eventYear === year && !store.hiddenEventTypes.has(event.type);
-    })
-    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-});
-
 const weekDays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
 function prevYear() {
