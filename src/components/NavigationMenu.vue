@@ -143,7 +143,7 @@ function toggleSettingsModal() {
       <div class="flex lg:flex-1">
         <router-link to="/" class="-m-1.5 p-1.5">
           <span class="sr-only">Natural Agenda</span>
-          <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1>
+          <!-- <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1> -->
         </router-link>
       </div>
       <div class="flex lg:hidden">
@@ -189,7 +189,7 @@ function toggleSettingsModal() {
           <div class="flex items-center justify-between">
             <router-link to="/" class="-m-1.5 p-1.5" @click="mobileMenuOpen = false">
               <span class="sr-only">Natural Agenda</span>
-              <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1>
+              <!-- <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1> -->
             </router-link>
             <button type="button" class="-m-2.5 rounded-md p-2.5 text-gray-700 dark:text-gray-200" @click="mobileMenuOpen = false">
               <span class="sr-only">Close menu</span>

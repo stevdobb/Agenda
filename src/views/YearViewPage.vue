@@ -133,7 +133,7 @@ function handleRestart() {
     />
 
     <header class="text-center my-8 relative no-print">
-      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1>
+      <!-- <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1> -->
        <div class="flex justify-center space-x-2 mb-4 mt-5">
         <router-link to="/" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Home</router-link>
       </div>

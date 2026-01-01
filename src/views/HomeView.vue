@@ -301,7 +301,7 @@ function handleLogin() {
 <template>
   <div class="max-w-xl mx-auto p-3 sm:p-3 lg:max-w-7xl xl:max-w-full">
     <header class="text-center my-8 relative">
-      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1>
+      <!-- <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1> -->
       
       <!-- Settings Button -->
       <button @click="showSettingsModal = true" class="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -422,7 +422,7 @@ function handleLogin() {
         </div>
       </div>
       <div v-else class="text-center py-12">
-        <h2 class="text-xl font-semibold mb-4 dark:text-white">Welcome to Natural Agenda</h2>
+        <!-- <h2 class="text-xl font-semibold mb-4 dark:text-white">Welcome to Natural Agenda</h2> -->
         <p class="text-gray-500 dark:text-gray-400 mb-6">
           Please log in with your Google account to connect your calendar and see your events.
         </p>
