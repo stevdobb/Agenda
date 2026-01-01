@@ -29,16 +29,19 @@ onMounted(() => {
 watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView], oldValues) => {
   const [wasLoggedIn] = oldValues || [false];
   if (!isLoggedIn) return;
+  console.log('HomeView Watcher: isLoggedIn:', isLoggedIn, 'newDate:', newDate, 'newView:', newView); // Debug log
 
   // Initial login fetches a wide range, subsequent view/date changes fetch specific ranges
   if (wasLoggedIn) {
     const { fetchStart, fetchEnd } = getFetchRangeForView(newView, newDate);
+    console.log('HomeView Watcher: Calling fetchUpcomingEvents with fetchStart:', fetchStart, 'fetchEnd:', fetchEnd); // Debug log
     await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
   }
 }, { immediate: true })
 
 
 function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
+  console.log('getFetchRangeForView: Input - view:', view, 'date:', date); // Debug log
   let fetchStart: Date;
   let fetchEnd: Date;
   const today = new Date();
