@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
 import InstallButton from '@/components/InstallButton.vue'
 import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
 import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
-import { PlusIcon, CalendarDaysIcon, TrashIcon, Cog6ToothIcon, CheckBadgeIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import { PlusIcon, CalendarDaysIcon, TrashIcon, Cog6ToothIcon, CheckBadgeIcon, ArrowPathIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
@@ -296,6 +297,9 @@ function isEventToday(event: any): boolean {
 function handleLogin() {
   requestAccessToken();
 }
+
+const route = useRoute()
+const isYearActive = computed(() => route.path === '/year' || route.path.startsWith('/year'))
 </script>
 
 <template>
@@ -313,8 +317,10 @@ function handleLogin() {
         <button @click="currentView = 'list'" :class="{'bg-blue-500 text-white': currentView === 'list', 'bg-gray-200 dark:bg-gray-700': currentView !== 'list'}" class="px-3 py-1 rounded-md transition">List</button>
         <button @click="currentView = 'week'" :class="{'bg-blue-500 text-white': currentView === 'week', 'bg-gray-200 dark:bg-gray-700': currentView !== 'week'}" class="px-3 py-1 rounded-md transition">Week</button>
         <button @click="currentView = 'month'" :class="{'bg-blue-500 text-white': currentView === 'month', 'bg-gray-200 dark:bg-gray-700': currentView !== 'month'}" class="px-3 py-1 rounded-md transition">Month</button>
-        <router-link to="/year" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Year</router-link>
-        <button @click="manualFetchEvents" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Refresh Events</button>
+        <router-link to="/year" :class="{ 'bg-blue-500 text-white': isYearActive, 'bg-gray-200 dark:bg-gray-700': !isYearActive }" class="px-3 py-1 rounded-md transition">Year</router-link>
+        <button @click="manualFetchEvents" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition" aria-label="Refresh Events">
+          <ArrowPathIcon class="h-5 w-5 text-gray-700 dark:text-gray-300" />
+        </button>
       </div>
     </header>
 
