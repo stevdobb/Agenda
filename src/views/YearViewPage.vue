@@ -7,6 +7,7 @@ import EventEditor from '@/components/EventEditor.vue'
 import PrintLegend from '@/components/PrintLegend.vue'
 import EventList from '@/components/EventList.vue' // Import the new component
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SettingsModal from '@/components/SettingsModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import TopMenu from '@/components/TopMenu.vue'
@@ -21,12 +22,17 @@ const store = useCalendarStore()
 const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
 const showConfirmModal = ref(false)
+const showSettingsModal = ref(false)
 
 function printView() {
   window.print()
 }
 
 function exportData() {
+  const now = new Date()
+  const pad = (value: number) => value.toString().padStart(2, '0')
+  const dateStamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+  const timeStamp = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
   const data = {
     events: store.events,
     eventTypes: store.eventTypes,
@@ -36,7 +42,7 @@ function exportData() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'calendar-data.json'
+  a.download = `calendar-data-${dateStamp}-${timeStamp}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -138,20 +144,22 @@ function handleViewSwitch(view: string) {
         @confirm="handleRestart"
         @cancel="showConfirmModal = false"
     />
+    <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
 
     <TopMenu 
       currentView="year" 
-      :showSettings="false" 
+      :showSettings="true" 
       :showRefresh="false" 
       @update:view="handleViewSwitch" 
+      @openSettings="showSettingsModal = true"
     />
 
     <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <div class="lg:col-span-2 flex flex-col gap-8">
         <EventEditor />
+        <PrintLegend />
       </div>
       <div class="lg:col-span-1 flex flex-col gap-8">
-        <PrintLegend />
         <Card>
           <CardHeader>
             <CardTitle>Leave Days</CardTitle>
@@ -209,6 +217,10 @@ function handleViewSwitch(view: string) {
 }
 
 @media print {
+  .print-only {
+    display: block !important;
+  }
+
   .no-print,
   .page-container > header { /* Hide header explicitly */
     display: none !important;

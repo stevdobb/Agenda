@@ -7,14 +7,14 @@ import { computed } from 'vue'
 
 const store = useCalendarStore()
 
-const emit = defineEmits(['editEvent'])
-
 const sortedEvents = computed(() => {
-    return [...store.events].sort((a, b) => {
-        const dateA = new Date(a.startDate).getTime();
-        const dateB = new Date(b.startDate).getTime();
-        return dateA - dateB;
-    });
+    return [...store.events]
+        .filter((event) => !store.isEventHidden(event))
+        .sort((a, b) => {
+            const dateA = new Date(a.startDate).getTime();
+            const dateB = new Date(b.startDate).getTime();
+            return dateA - dateB;
+        });
 });
 
 function deleteEvent(id: string) {
@@ -42,16 +42,16 @@ function formatEventDates(event: CalendarEvent): string {
       <div v-if="sortedEvents.length === 0" class="text-center text-muted-foreground">
         No events added yet.
       </div>
-      <ul class="space-y-3">
-        <li v-for="event in sortedEvents" :key="event.id" class="flex items-center justify-between p-3 border rounded-md">
-          <div class="flex items-center gap-3">
-            <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: event.color }"></span>
-            <div>
-              <p class="font-medium">{{ event.type }}</p>
-              <p class="text-sm text-muted-foreground">{{ formatEventDates(event) }}</p>
-            </div>
+      <ul class="divide-y">
+        <li v-for="event in sortedEvents" :key="event.id" class="flex items-center justify-between gap-3 py-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: event.color }"></span>
+            <span class="text-xs text-muted-foreground tabular-nums shrink-0">
+              {{ formatEventDates(event) }}
+            </span>
+            <p class="font-medium truncate">{{ event.type }}</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1">
             <Button variant="outline" size="icon" @click="store.selectedEvent = event">
               <PencilIcon class="h-4 w-4" />
             </Button>

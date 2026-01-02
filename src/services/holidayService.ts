@@ -56,3 +56,50 @@ export function getBelgianHolidays(year: number) {
   ];
   return holidays;
 }
+
+function getMonday(date: Date): Date {
+  const monday = new Date(date);
+  const day = (monday.getDay() + 6) % 7;
+  monday.setDate(monday.getDate() - day);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function getIsoWeekStart(year: number, week: number): Date {
+  const jan4 = new Date(year, 0, 4);
+  const weekOneMonday = getMonday(jan4);
+  const start = new Date(weekOneMonday);
+  start.setDate(weekOneMonday.getDate() + (week - 1) * 7);
+  return start;
+}
+
+function getFirstMondayOfApril(year: number): Date {
+  const aprilFirst = new Date(year, 3, 1);
+  const day = (aprilFirst.getDay() + 6) % 7;
+  const monday = new Date(aprilFirst);
+  if (day !== 0) {
+    monday.setDate(aprilFirst.getDate() + (7 - day));
+  }
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+export function getBelgianSchoolHolidays(year: number) {
+  const krokusStart = getIsoWeekStart(year, 9);
+  const herfstStart = getIsoWeekStart(year, 44);
+
+  const easter = getEaster(year);
+  const aprilFifteenth = new Date(year, 3, 15);
+  const paasStart = easter > aprilFifteenth ? addDays(easter, 1) : getFirstMondayOfApril(year);
+
+  const christmas = new Date(year, 11, 25);
+  const kerstStart = getMonday(christmas);
+
+  return [
+    { name: 'Krokusvakantie', startDate: formatDate(krokusStart), endDate: formatDate(addDays(krokusStart, 6)) },
+    { name: 'Paasvakantie', startDate: formatDate(paasStart), endDate: formatDate(addDays(paasStart, 13)) },
+    { name: 'Zomervakantie', startDate: formatDate(new Date(year, 6, 1)), endDate: formatDate(new Date(year, 7, 31)) },
+    { name: 'Herfstvakantie', startDate: formatDate(herfstStart), endDate: formatDate(addDays(herfstStart, 6)) },
+    { name: 'Kerstvakantie', startDate: formatDate(kerstStart), endDate: formatDate(addDays(kerstStart, 13)) },
+  ];
+}

@@ -1,7 +1,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, watch, computed } from 'vue' // Import computed
-import { getBelgianHolidays } from '@/services/holidayService'
+import { getBelgianHolidays, getBelgianSchoolHolidays } from '@/services/holidayService'
 import { calculateWorkingDays } from '@/lib/utils' // Import calculateWorkingDays
 import { format } from 'date-fns' // Import format from date-fns
 
@@ -31,6 +31,7 @@ const TOTAL_LEAVE_DAYS = 32 // Fixed total leave days
 
 const defaultEventTypes: EventType[] = [
   { name: 'Wettelijke feestdag', color: '#D32F2F' },
+  { name: 'Schoolvakantie', color: '#D3D3D3' },
   { name: 'Verlof', color: '#1976D2' },
   { name: 'Venise', color: '#388E3C' },
   { name: 'Loopwedstrijd', color: '#FBC02D' }
@@ -45,6 +46,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   // Load from localStorage
   const storedEvents = localStorage.getItem(STORAGE_KEY)
   const storedTypes = localStorage.getItem(TYPES_STORAGE_KEY)
+  const storedHiddenTypes = localStorage.getItem(HIDDEN_TYPES_STORAGE_KEY)
 
   if (storedEvents) {
     events.value = JSON.parse(storedEvents)
@@ -56,22 +58,39 @@ export const useCalendarStore = defineStore('calendar', () => {
     eventTypes.value = defaultEventTypes
   }
 
+  if (storedHiddenTypes) {
+    hiddenEventTypes.value = new Set(JSON.parse(storedHiddenTypes))
+  }
+
 
 
   if (!storedEvents && !storedTypes) {
     const currentYear = new Date().getFullYear()
     const holidays = getBelgianHolidays(currentYear)
-          const holidayType = defaultEventTypes.find(t => t.name === 'Wettelijke feestdag')
-        if (holidayType) {
-          const holidayEvents: CalendarEvent[] = holidays.map(h => ({
-            id: crypto.randomUUID(),
-            startDate: h.date,
-            endDate: h.date,
-            type: h.name, // Use the specific holiday name
-            color: holidayType.color
-          }))
-          events.value.push(...holidayEvents)
-        }
+    const holidayType = defaultEventTypes.find(t => t.name === 'Wettelijke feestdag')
+    if (holidayType) {
+      const holidayEvents: CalendarEvent[] = holidays.map(h => ({
+        id: crypto.randomUUID(),
+        startDate: h.date,
+        endDate: h.date,
+        type: h.name, // Use the specific holiday name
+        color: holidayType.color
+      }))
+      events.value.push(...holidayEvents)
+    }
+
+    const schoolHolidays = getBelgianSchoolHolidays(currentYear)
+    const schoolHolidayType = defaultEventTypes.find(t => t.name === 'Schoolvakantie')
+    if (schoolHolidayType) {
+      const schoolHolidayEvents: CalendarEvent[] = schoolHolidays.map(h => ({
+        id: crypto.randomUUID(),
+        startDate: h.startDate,
+        endDate: h.endDate,
+        type: h.name,
+        color: schoolHolidayType.color
+      }))
+      events.value.push(...schoolHolidayEvents)
+    }
         
         // Add default running race events from ICS data
         const runningRaceType = defaultEventTypes.find(t => t.name === 'Loopwedstrijd');
@@ -149,11 +168,34 @@ export const useCalendarStore = defineStore('calendar', () => {
       eventTypes.value.push(type)
     }
   }
+
+  function normalizeColor(color: string) {
+    return color.trim().toLowerCase()
+  }
+
+  function getEventTypeNameForEvent(event: CalendarEvent) {
+    const directMatch = eventTypes.value.find((type) => type.name === event.type)
+    if (directMatch) {
+      return directMatch.name
+    }
+
+    const eventColor = normalizeColor(event.color)
+    const colorMatch = eventTypes.value.find((type) => normalizeColor(type.color) === eventColor)
+    return colorMatch?.name ?? null
+  }
+
+  function isEventHidden(event: CalendarEvent) {
+    const typeName = getEventTypeNameForEvent(event)
+    if (typeName) {
+      return hiddenEventTypes.value.has(typeName)
+    }
+    return hiddenEventTypes.value.has(event.type)
+  }
   
   function getEventsForDate(date: Date) {
     const dateString = format(date, 'yyyy-MM-dd')
     return events.value.filter(event => {
-      return dateString >= event.startDate && dateString <= event.endDate && !hiddenEventTypes.value.has(event.type)
+      return dateString >= event.startDate && dateString <= event.endDate && !isEventHidden(event)
     })
   }
 
@@ -186,9 +228,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
 
     events.value.forEach(event => {
-      // Only consider non-'Wettelijke feestdag' events for leave day calculation
-      // 'Wettelijke feestdag' (legal holiday) events are not counted as planned leave days.
-      if (event.type !== 'Wettelijke feestdag' && !event.type.startsWith('Loop van de Kust')) {
+      // Only count "Verlof" events as leave days.
+      if (event.type === 'Verlof') {
         const start = new Date(event.startDate);
         const end = new Date(event.endDate);
         
@@ -221,5 +262,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     selectedEvent,
     hiddenEventTypes, // New: Return hiddenEventTypes
     toggleEventTypeVisibility, // New: Return toggleEventTypeVisibility
+    isEventHidden,
   };
 })
