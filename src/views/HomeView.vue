@@ -376,29 +376,29 @@ function handleLogin() {
             <CalendarDaysIcon class="h-6 w-6 mr-2 text-gray-700 dark:text-gray-300" />
             Upcoming Events
           </h2>
-          <div v-if="displayedGroupedEvents.length > 0" class="space-y-6">
+          <div v-if="displayedGroupedEvents.length > 0" class="space-y-6 xl:grid xl:grid-cols-4 xl:space-y-0 xl:gap-6">
             <div v-for="dayGroup in displayedGroupedEvents" :key="dayGroup.date" class="space-y-3">
-              <h3 class="text-lg font-semibold text-gray-800 dark:text-white border-b dark:border-gray-700 pb-2 mb-2">
+              <h3 class="text-sm font-semibold text-gray-800 dark:text-white border-b dark:border-gray-700 pb-1 mb-1">
                 {{ formatDayHeader(dayGroup.date) }}
               </h3>
-              <ul class="space-y-2">
+              <ul class="space-y-1">
                 <li
                   v-for="event in dayGroup.events"
                   :key="event.id"
                   :class="[
-                    'p-3 rounded-md border flex items-center justify-between space-x-3 transition-all duration-300',
+                    'p-2 text-sm rounded-md border flex items-center justify-between space-x-2 transition-all duration-200',
                     event.id === lastAddedEventId
-                      ? 'bg-green-100 dark:bg-green-800 border-green-400 dark:border-green-600 shadow-lg' // Highlight for last added
+                      ? 'bg-green-100 dark:bg-green-800 border-green-400 dark:border-green-600 shadow'
                       : isEventToday(event)
-                        ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' // Highlight for today's events
-                        : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600' // Default
+                        ? 'bg-blue-100 dark:bg-blue-900 border-blue-500'
+                        : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                   ]"
                 >
-                  <div class="flex items-start space-x-3">
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">
+                  <div class="flex items-start space-x-2">
+                    <p class="text-xs font-medium text-gray-700 dark:text-gray-300 w-16 flex-shrink-0">
                       {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
                     </p>
-                    <p class="font-semibold text-gray-800 dark:text-white">{{ event.summary }}</p>
+                    <p class="font-semibold text-sm text-gray-800 dark:text-white">{{ event.summary }}</p>
                   </div>
                   <button @click="deleteEvent(event.id)" :disabled="isLoading" class="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-700" aria-label="Delete event">
                     <TrashIcon class="h-5 w-5" />

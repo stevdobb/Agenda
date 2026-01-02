@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { useCalendarStore, type CalendarEvent } from '@/stores/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
