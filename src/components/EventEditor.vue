@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useCalendarStore, type EventType, type CalendarEvent } from '@/stores/calendar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,6 +33,19 @@ const litepickerOptions = {
   delimiter: dateRangeDelimiter,
   lang: 'nl-NL',
 }
+
+const selectedTypeColor = computed<string>({
+  get() {
+    const type = store.eventTypes.find((eventType) => eventType.name === selectedType.value)
+    return type?.color ?? '#000000'
+  },
+  set(newColor) {
+    if (!selectedType.value || selectedType.value === 'custom') {
+      return
+    }
+    store.updateEventTypeColor(selectedType.value, newColor)
+  },
+})
 
 function formatDateRange(start: string, end: string) {
   if (!start && !end) return ''
@@ -156,6 +169,10 @@ function saveEvent() {
             <option v-for="type in store.eventTypes" :key="type.name" :value="type.name">{{ type.name }}</option>
             <option value="custom">-- Create Custom Type --</option>
           </select>
+        </div>
+        <div v-if="selectedType && selectedType !== 'custom'" class="md:col-span-2 space-y-2">
+          <Label for="event-type-color">Event Type Color</Label>
+          <Input type="color" id="event-type-color" v-model="selectedTypeColor" class="w-full h-10" />
         </div>
          <div v-if="isCreatingCustomType" class="md:col-span-2 grid grid-cols-1 gap-4">
           <div class="space-y-2">

@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import YearView from '@/components/YearView.vue'
 import EventEditor from '@/components/EventEditor.vue'
@@ -23,6 +23,7 @@ const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
 const showConfirmModal = ref(false)
 const showSettingsModal = ref(false)
+const eventEditorRef = ref<HTMLElement | null>(null)
 
 function printView() {
   window.print()
@@ -133,6 +134,11 @@ function handleViewSwitch(view: string) {
     router.push('/')
   }
 }
+
+async function scrollToEventEditor() {
+  await nextTick()
+  eventEditorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 </script>
 
 <template>
@@ -156,7 +162,9 @@ function handleViewSwitch(view: string) {
 
     <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <div class="lg:col-span-2 flex flex-col gap-8">
-        <EventEditor />
+        <div ref="eventEditorRef">
+          <EventEditor />
+        </div>
         <PrintLegend />
       </div>
       <div class="lg:col-span-1 flex flex-col gap-8">
@@ -205,7 +213,7 @@ function handleViewSwitch(view: string) {
     </div>
     <!-- New position for EventList -->
     <div class="mt-8 no-print">
-      <EventList />
+      <EventList @editEvent="scrollToEventEditor" />
     </div>
   </div>
 </template>

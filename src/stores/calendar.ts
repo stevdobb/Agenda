@@ -191,7 +191,38 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
     return hiddenEventTypes.value.has(event.type)
   }
-  
+
+  function updateEventTypeColor(typeName: string, color: string) {
+    const index = eventTypes.value.findIndex((type) => type.name === typeName)
+    if (index === -1) {
+      return
+    }
+
+    const oldColor = eventTypes.value[index].color
+    if (normalizeColor(oldColor) === normalizeColor(color)) {
+      return
+    }
+
+    const eventTypeNames = new Set(eventTypes.value.map((type) => type.name))
+    eventTypes.value = eventTypes.value.map((type, typeIndex) => {
+      if (typeIndex === index) {
+        return { ...type, color }
+      }
+      return type
+    })
+
+    const normalizedOldColor = normalizeColor(oldColor)
+    events.value = events.value.map((event) => {
+      if (event.type === typeName) {
+        return { ...event, color }
+      }
+      if (!eventTypeNames.has(event.type) && normalizeColor(event.color) === normalizedOldColor) {
+        return { ...event, color }
+      }
+      return event
+    })
+  }
+
   function getEventsForDate(date: Date) {
     const dateString = format(date, 'yyyy-MM-dd')
     return events.value.filter(event => {
@@ -271,5 +302,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     hiddenEventTypes, // New: Return hiddenEventTypes
     toggleEventTypeVisibility, // New: Return toggleEventTypeVisibility
     isEventHidden,
+    updateEventTypeColor,
   };
 })

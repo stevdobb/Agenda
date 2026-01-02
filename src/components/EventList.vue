@@ -7,6 +7,8 @@ import { computed } from 'vue'
 
 const store = useCalendarStore()
 
+const emit = defineEmits(['editEvent'])
+
 const groupedEvents = computed(() => {
     const sorted = [...store.events]
         .filter((event) => !store.isEventHidden(event))
@@ -47,6 +49,11 @@ function deleteEvent(id: string) {
     }
 }
 
+function editEvent(event: CalendarEvent) {
+    store.selectedEvent = event
+    emit('editEvent')
+}
+
 function formatEventDates(event: CalendarEvent): string {
     const start = new Date(event.startDate).toLocaleDateString();
     const end = new Date(event.endDate).toLocaleDateString();
@@ -81,7 +88,7 @@ function formatEventDates(event: CalendarEvent): string {
                 <p class="font-medium truncate">{{ event.type }}</p>
               </div>
               <div class="flex items-center gap-1">
-                <Button variant="outline" size="icon" @click="store.selectedEvent = event">
+                <Button variant="outline" size="icon" @click="editEvent(event)">
                   <PencilIcon class="h-4 w-4" />
                 </Button>
                 <Button variant="destructive" size="icon" @click="deleteEvent(event.id)">

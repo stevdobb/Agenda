@@ -107,6 +107,47 @@ function formatDayHeader(dateString: string) {
   }
 }
 
+function extractTimeFromInput(input: string) {
+  const patterns = [
+    /\b(?:at|om)\s*(\d{1,2})(?:[:.u]|h)(\d{2})\b/i,
+    /\b(\d{1,2})(?:[:.u]|h)(\d{2})\b/i,
+    /\b(?:at|om)\s*(\d{3,4})\b/i,
+    /\b(\d{3,4})\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (!match) continue;
+
+    let hour: number;
+    let minute: number;
+
+    if (match[2]) {
+      hour = parseInt(match[1], 10);
+      minute = parseInt(match[2], 10);
+    } else {
+      const timeStr = match[1];
+      if (!timeStr) continue;
+      if (timeStr.length === 3) {
+        hour = parseInt(timeStr.substring(0, 1), 10);
+        minute = parseInt(timeStr.substring(1), 10);
+      } else {
+        hour = parseInt(timeStr.substring(0, 2), 10);
+        minute = parseInt(timeStr.substring(2), 10);
+      }
+    }
+
+    if (Number.isNaN(hour) || Number.isNaN(minute) || hour > 23 || minute > 59) {
+      continue;
+    }
+
+    const summary = input.replace(match[0], '').replace(/\s{2,}/g, ' ').trim();
+    return { summary, hour, minute };
+  }
+
+  return null;
+}
+
 const groupedEvents = computed(() => {
   const groups: { [key: string]: any[] } = {};
   authStore.upcomingEvents.forEach(event => {
@@ -194,19 +235,34 @@ async function createEvent() {
   // Otherwise, proceed as a calendar event
   try {
     const parsedResults = chrono.parse(input); // Use 'input' instead of 'eventText.value'
+
+    let summary = '';
+    let startDate: Date;
+    let endDate: Date;
+
     if (parsedResults.length === 0) {
-      throw new Error("I couldn't understand the date and time. Please be more specific.");
+      const timeMatch = extractTimeFromInput(input);
+      summary = timeMatch?.summary ?? input;
+      if (!summary) {
+        throw new Error("Please provide a title for the event.");
+      }
+      startDate = new Date();
+      if (timeMatch) {
+        startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
+      }
+      endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    } else {
+      const result = parsedResults[0];
+      summary = input.replace(result.text, '').trim(); // Use 'input'
+      summary = summary.replace(/\b(at|om)\b\s*$/i, '').trim();
+
+      if (!summary) {
+        throw new Error("Please provide a title for the event.");
+      }
+
+      startDate = result.start.date();
+      endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
     }
-
-    const result = parsedResults[0];
-    const summary = input.replace(result.text, '').trim(); // Use 'input'
-
-    if (!summary) {
-      throw new Error("Please provide a title for the event.");
-    }
-
-    const startDate = result.start.date();
-    const endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const activeAccount = authStore.accounts.find(acc => acc.id === authStore.activeAccountId);
