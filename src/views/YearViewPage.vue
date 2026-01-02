@@ -1,6 +1,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import YearView from '@/components/YearView.vue'
 import EventEditor from '@/components/EventEditor.vue'
 import PrintLegend from '@/components/PrintLegend.vue'
@@ -8,12 +9,14 @@ import EventList from '@/components/EventList.vue' // Import the new component
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import TopMenu from '@/components/TopMenu.vue'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
 import { parseIcsContent, type ParsedIcsEvent } from '@/services/icsService' // New: Import ICS service
 
 // import type { DateRange } from 'radix-vue' // Import DateRange type
 
+const router = useRouter()
 const store = useCalendarStore()
 const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
@@ -120,6 +123,12 @@ function handleRestart() {
     store.clearData()
     showConfirmModal.value = false
 }
+
+function handleViewSwitch(view: string) {
+  if (view !== 'year') {
+    router.push('/')
+  }
+}
 </script>
 
 <template>
@@ -132,12 +141,13 @@ function handleRestart() {
         @cancel="showConfirmModal = false"
     />
 
-    <header class="text-center my-8 relative no-print">
-      <!-- <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1> -->
-       <div class="flex justify-center space-x-2 mb-4 mt-5">
-        <router-link to="/" class="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Home</router-link>
-      </div>
-    </header>
+    <TopMenu 
+      currentView="year" 
+      :showSettings="false" 
+      :showRefresh="false" 
+      @update:view="handleViewSwitch" 
+    />
+
     <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
       <div class="lg:col-span-2 flex flex-col gap-8">
         <EventEditor />
@@ -180,14 +190,14 @@ function handleRestart() {
             <Button @click="triggerImport" variant="outline">Import JSON</Button>
             <Button @click="triggerIcsImport" variant="outline">Import ICS</Button>
             <Button @click="showConfirmModal = true" variant="destructive">Restart</Button>
-            <Button @click="printView">Print Year View</Button>
+            <Button @click="printView">Print / PDF</Button>
             <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
             <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
           </CardContent>
         </Card>
       </div>
     </div>
-    <div class="">
+    <div class="printable-area">
       <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ new Date().getFullYear() }}</h2>
       <YearView />
       <div class="mt-8 print-only print-legend-container">
@@ -229,56 +239,10 @@ function handleRestart() {
     background-color: #fff; /* Ensure white background */
   }
 
-  /* YearView specific print styles */
-  .printable-area .grid {
-    grid-template-columns: repeat(3, 1fr) !important; /* 3 months per row */
-    gap: 0.25rem !important; /* Smaller gap */
-  }
-  .printable-area .card { /* Target the Card component in print */
-    border: 1px solid #eee !important;
-    box-shadow: none !important;
-    padding: 0.2rem !important; /* Smaller padding for cards */
-  }
-  .printable-area .card-header {
-    padding: 0.2rem !important;
-  }
-  .printable-area .card-title {
-    font-size: 0.7rem !important; /* Smaller month titles */
-  }
-  .printable-area .card-content {
-    padding: 0.2rem !important;
-  }
-  .printable-area .grid-cols-7 > div { /* Weekday headers and day cells */
-    font-size: 0.55rem !important; /* Smaller text */
-    width: 0.9rem !important; /* Smaller cell size */
-    height: 0.9rem !important;
-    line-height: 0.9rem !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background-color: var(--tw-bg-opacity, 1) !important; /* Preserve background color */
+  /* Ensure background colors are printed */
+  .printable-area {
     -webkit-print-color-adjust: exact !important; /* Force background printing for Webkit */
     print-color-adjust: exact !important; /* Force background printing */
-  }
-  .printable-area .rounded-full {
-    border-radius: 0 !important; /* Remove rounded corners for days */
-  }
-
-  /* Print Legend specific styles */
-  .printable-area .print-legend-container {
-    margin-top: 0.5rem !important;
-    border: 1px solid #eee !important;
-    box-shadow: none !important;
-    padding: 0.5rem !important;
-  }
-  .printable-area .print-legend-container .card-title {
-    font-size: 0.8rem !important;
-  }
-  .printable-area .print-legend-container li {
-    font-size: 0.65rem !important;
-  }
-  .printable-area .print-legend-container .w-5, .printable-area .print-legend-container .h-5 {
-    width: 0.7rem !important;
-    height: 0.7rem !important;
   }
 }
 </style>

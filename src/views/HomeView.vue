@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
 import InstallButton from '@/components/InstallButton.vue'
 import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
 import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
-import { PlusIcon, CalendarDaysIcon, TrashIcon, Cog6ToothIcon, CheckBadgeIcon, ArrowPathIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import TopMenu from '@/components/TopMenu.vue'
+import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const todoStore = useTodoStore() // Instantiate Todo store
 const eventText = ref('')
@@ -296,28 +299,26 @@ function isEventToday(event: any): boolean {
 function handleLogin() {
   requestAccessToken();
 }
+
+function handleViewSwitch(view: string) {
+  if (view === 'year') {
+    router.push('/year')
+  } else {
+    currentView.value = view as 'list' | 'week' | 'month'
+  }
+}
 </script>
 
 <template>
   <div class="max-w-xl mx-auto p-3 sm:p-3 lg:max-w-7xl xl:max-w-full">
-    <header class="text-center my-8 relative">
-      <!-- <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">Natural Agenda</h1> -->
-      
-      <!-- Settings Button -->
-      <button @click="showSettingsModal = true" class="absolute top-0 right-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <Cog6ToothIcon class="h-6 w-6" />
-      </button>
-
-      <!-- View Switcher -->
-      <div class="flex justify-center space-x-2 mb-4 mt-5">
-        <button @click="currentView = 'list'" :class="{'bg-blue-500 text-white': currentView === 'list', 'bg-gray-200 dark:bg-gray-700': currentView !== 'list'}" class="px-3 py-1 rounded-md transition">List</button>
-        <button @click="currentView = 'week'" :class="{'bg-blue-500 text-white': currentView === 'week', 'bg-gray-200 dark:bg-gray-700': currentView !== 'week'}" class="px-3 py-1 rounded-md transition">Week</button>
-        <button @click="currentView = 'month'" :class="{'bg-blue-500 text-white': currentView === 'month', 'bg-gray-200 dark:bg-gray-700': currentView !== 'month'}" class="px-3 py-1 rounded-md transition">Month</button>
-        <button @click="manualFetchEvents" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition" aria-label="Refresh Events">
-          <ArrowPathIcon class="h-5 w-5 text-gray-700 dark:text-gray-300" />
-        </button>
-      </div>
-    </header>
+    <TopMenu 
+      :currentView="currentView" 
+      :showSettings="true" 
+      :showRefresh="true" 
+      @update:view="handleViewSwitch" 
+      @refresh="manualFetchEvents" 
+      @openSettings="showSettingsModal = true" 
+    />
 
     <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
 

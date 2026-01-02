@@ -8,7 +8,7 @@ const year = computed(() => new Date().getFullYear())
 const months = Array.from({ length: 12 }, (_, i) => i)
 
 function getMonthName(monthIndex: number) {
-  return new Date(year.value, monthIndex, 1).toLocaleString('default', { month: 'long' })
+  return new Date(year.value, monthIndex, 1).toLocaleString('nl-NL', { month: 'long' })
 }
 
 function getDaysInMonth(monthIndex: number) {
@@ -16,7 +16,8 @@ function getDaysInMonth(monthIndex: number) {
 }
 
 function getFirstDayOfMonth(monthIndex: number) {
-  return new Date(year.value, monthIndex, 1).getDay()
+  const day = new Date(year.value, monthIndex, 1).getDay()
+  return (day + 6) % 7
 }
 
 function getEventsForMonth(monthIndex: number) {
@@ -73,7 +74,7 @@ function getDayStyle(monthIndex: number, day: number) {
       
       <!-- Calendar Grid -->
       <div class="grid grid-cols-7 gap-1 text-center text-xs mb-4 text-gray-600 dark:text-gray-400">
-        <div v-for="day in ['S','M','T','W','T','F','S']" :key="day" class="font-bold">{{ day }}</div>
+        <div v-for="day in ['M','D','W','D','V','Z','Z']" :key="day" class="font-bold">{{ day }}</div>
         <div v-for="blank in getFirstDayOfMonth(month)" :key="`blank-${blank}`"></div>
         <div v-for="day in getDaysInMonth(month)" :key="day" class="p-1">
             <div 
