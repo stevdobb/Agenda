@@ -22,8 +22,6 @@ const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
 const showConfirmModal = ref(false)
 
-// const selectedDateRange = ref<DateRange | undefined>(undefined) // Reactive state for selected date range
-
 function printView() {
   window.print()
 }
@@ -159,13 +157,6 @@ function handleViewSwitch(view: string) {
             <CardTitle>Leave Days</CardTitle>
           </CardHeader>
           <CardContent>
-            <div class="flex flex-col space-y-4">
-              <!-- <DatePickerRange v-model="selectedDateRange" /> -->
-              <!-- <div class="flex justify-between py-1">
-                <span>Calculated Leave Days:</span>
-                <span class="font-semibold">{{ calculatedLeaveDays }}</span>
-              </div> -->
-            </div>
             <!-- Original leave day stats, can be removed or repurposed if not needed -->
             <div class="flex justify-between py-1">
               <span>Total:</span>

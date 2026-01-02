@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import Litepicker from '@/components/Litepicker.vue'
 
 const store = useCalendarStore()
 
@@ -19,16 +20,47 @@ const store = useCalendarStore()
 
 const startDate = ref('')
 const endDate = ref('')
+const dateRange = ref('')
 const selectedType = ref('')
 const customTypeName = ref('')
 const customTypeColor = ref('#000000')
 const isCreatingCustomType = ref(false)
+const dateRangeDelimiter = ' - '
+const litepickerOptions = {
+  singleMode: false,
+  autoApply: true,
+  format: 'YYYY-MM-DD',
+  delimiter: dateRangeDelimiter,
+  lang: 'nl-NL',
+}
+
+function formatDateRange(start: string, end: string) {
+  if (!start && !end) return ''
+  if (!end) return start
+  if (!start) return end
+  return `${start}${dateRangeDelimiter}${end}`
+}
+
+function parseDateRange(range: string) {
+  const trimmed = range.trim()
+  if (!trimmed) {
+    return { start: '', end: '' }
+  }
+
+  if (!trimmed.includes(dateRangeDelimiter)) {
+    return { start: trimmed, end: trimmed }
+  }
+
+  const [start, end] = trimmed.split(dateRangeDelimiter).map((part) => part.trim())
+  return { start: start || '', end: end || start || '' }
+}
 
 // Watch store.selectedEvent to populate form fields
 watch(() => store.selectedEvent, (newEvent) => {
   if (newEvent) {
     startDate.value = newEvent.startDate || '';
     endDate.value = newEvent.endDate || '';
+    dateRange.value = formatDateRange(startDate.value, endDate.value)
     selectedType.value = newEvent.type
     // Reset custom type fields
     isCreatingCustomType.value = false
@@ -38,12 +70,19 @@ watch(() => store.selectedEvent, (newEvent) => {
     // Reset form for new event
     startDate.value = ''
     endDate.value = ''
+    dateRange.value = ''
     selectedType.value = store.eventTypes[0]?.name || '' // Select the first available type or empty
     isCreatingCustomType.value = false
     customTypeName.value = ''
     customTypeColor.value = '#000000'
   }
 }, { immediate: true })
+
+watch(dateRange, (newRange) => {
+  const { start, end } = parseDateRange(newRange)
+  startDate.value = start
+  endDate.value = end
+})
 
 function saveEvent() {
   if (!startDate.value || !endDate.value || !selectedType.value) {
@@ -102,13 +141,14 @@ function saveEvent() {
     </CardHeader>
     <CardContent>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="space-y-2">
-          <Label for="start-date">Start Date</Label>
-          <Input type="date" id="start-date" v-model="startDate" />
-        </div>
-        <div class="space-y-2">
-          <Label for="end-date">End Date</Label>
-          <Input type="date" id="end-date" v-model="endDate" />
+        <div class="md:col-span-2 space-y-2">
+          <Label for="date-range">Date Range</Label>
+          <Litepicker
+            id="date-range"
+            v-model="dateRange"
+            :options="litepickerOptions"
+            placeholder="Select a date range"
+          />
         </div>
         <div class="md:col-span-2 space-y-2">
           <Label for="event-type">Event Type</Label>
@@ -135,4 +175,3 @@ function saveEvent() {
     </CardFooter>
   </Card>
 </template>
-
