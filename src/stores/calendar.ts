@@ -226,17 +226,25 @@ export const useCalendarStore = defineStore('calendar', () => {
     let plannedDays = 0
     const currentYear = new Date().getFullYear();
     const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
+    const excludedTypes = new Set([
+      'Wettelijke feestdag',
+      'Venise',
+      'Loopwedstrijd',
+      'Schoolvakantie',
+    ])
 
     events.value.forEach(event => {
-      // Only count "Verlof" events as leave days.
-      if (event.type === 'Verlof') {
-        const start = new Date(event.startDate);
-        const end = new Date(event.endDate);
-        
-        // Ensure start and end dates are valid before calculating
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-          plannedDays += calculateWorkingDays(start, end, allHolidays);
-        }
+      const resolvedType = getEventTypeNameForEvent(event) ?? event.type
+      if (excludedTypes.has(resolvedType)) {
+        return
+      }
+
+      const start = new Date(event.startDate);
+      const end = new Date(event.endDate);
+      
+      // Ensure start and end dates are valid before calculating
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        plannedDays += calculateWorkingDays(start, end, allHolidays);
       }
     });
 
