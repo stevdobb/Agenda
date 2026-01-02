@@ -187,7 +187,7 @@ function handleRestart() {
         </Card>
       </div>
     </div>
-    <div class="printable-area">
+    <div class="">
       <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ new Date().getFullYear() }}</h2>
       <YearView />
       <div class="mt-8 print-only print-legend-container">
@@ -195,7 +195,7 @@ function handleRestart() {
       </div>
     </div>
     <!-- New position for EventList -->
-    <div class="mt-8">
+    <div class="mt-8 no-print">
       <EventList />
     </div>
   </div>
@@ -231,7 +231,7 @@ function handleRestart() {
 
   /* YearView specific print styles */
   .printable-area .grid {
-    grid-template-columns: repeat(4, 1fr) !important; /* 4 months per row */
+    grid-template-columns: repeat(3, 1fr) !important; /* 3 months per row */
     gap: 0.25rem !important; /* Smaller gap */
   }
   .printable-area .card { /* Target the Card component in print */
@@ -256,6 +256,8 @@ function handleRestart() {
     margin: 0 !important;
     padding: 0 !important;
     background-color: var(--tw-bg-opacity, 1) !important; /* Preserve background color */
+    -webkit-print-color-adjust: exact !important; /* Force background printing for Webkit */
+    print-color-adjust: exact !important; /* Force background printing */
   }
   .printable-area .rounded-full {
     border-radius: 0 !important; /* Remove rounded corners for days */
