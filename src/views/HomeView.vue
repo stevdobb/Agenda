@@ -141,8 +141,9 @@ function extractTimeFromInput(input: string) {
       continue;
     }
 
-    const summary = input.replace(match[0], '').replace(/\s{2,}/g, ' ').trim();
-    return { summary, hour, minute };
+    const matchText = match[0];
+    const summary = input.replace(matchText, '').replace(/\s{2,}/g, ' ').trim();
+    return { summary, hour, minute, matchText };
   }
 
   return null;
@@ -235,13 +236,13 @@ async function createEvent() {
   // Otherwise, proceed as a calendar event
   try {
     const parsedResults = chrono.parse(input); // Use 'input' instead of 'eventText.value'
+    const timeMatch = extractTimeFromInput(input);
 
     let summary = '';
     let startDate: Date;
     let endDate: Date;
 
     if (parsedResults.length === 0) {
-      const timeMatch = extractTimeFromInput(input);
       summary = timeMatch?.summary ?? input;
       if (!summary) {
         throw new Error("Please provide a title for the event.");
@@ -254,6 +255,9 @@ async function createEvent() {
     } else {
       const result = parsedResults[0];
       summary = input.replace(result.text, '').trim(); // Use 'input'
+      if (timeMatch) {
+        summary = summary.replace(timeMatch.matchText, '').replace(/\s{2,}/g, ' ').trim();
+      }
       summary = summary.replace(/\b(at|om)\b\s*$/i, '').trim();
 
       if (!summary) {
@@ -262,6 +266,12 @@ async function createEvent() {
 
       startDate = result.start.date();
       endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
+      if (timeMatch && !result.start.isCertain('hour') && !result.start.isCertain('minute')) {
+        startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
+        if (!result.end || (!result.end.isCertain('hour') && !result.end.isCertain('minute'))) {
+          endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+        }
+      }
     }
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
