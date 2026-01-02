@@ -1,6 +1,8 @@
 
 // src/services/holidayService.ts
 
+import { format, addDays } from 'date-fns';
+
 /**
  * Calculates Easter in the Gregorian/Western (Catholic and Protestant) calendar.
  * based on the algorithm by Oudin (1940) from http://www.tondering.dk/claus/cal/easter.php.
@@ -32,14 +34,8 @@ function getEaster(year: number): Date {
   return new Date(year, month - 1, day);
 }
 
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
 function formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+    return format(date, 'yyyy-MM-dd');
 }
 
 export function getBelgianHolidays(year: number) {
