@@ -1,106 +1,97 @@
-
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useCalendarStore } from '@/stores/calendar'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 
 const store = useCalendarStore()
-const currentYear = ref(new Date().getFullYear())
 
-const months = computed(() => {
-  const year = currentYear.value
-  const monthNames = [
-    'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
-    'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'
-  ]
-  
-  return monthNames.map((name, index) => {
-    const monthIndex = index
-    const date = new Date(year, monthIndex, 1)
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
-    const firstDayOfWeek = (date.getDay() + 6) % 7 // 0=Monday, 6=Sunday
+const year = computed(() => new Date().getFullYear())
+const months = Array.from({ length: 12 }, (_, i) => i)
 
-          const days = Array.from({ length: daysInMonth }, (_, i) => {
-            const dayDate = new Date(year, monthIndex, i + 1)
-            const events = store.getEventsForDate(dayDate)
-            // Use the color of the first event for simplicity
-            const bgColor = events.length > 0 ? events[0].color : 'transparent'
-            return {
-              day: i + 1,
-              date: dayDate,
-              bgColor,
-              events // Include the events array
-            }
-          })
-    return {
-      name,
-      days,
-      firstDayOfWeek
-    }
-  })
-})
-
-const weekDays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
-
-function prevYear() {
-  currentYear.value--
+function getMonthName(monthIndex: number) {
+  return new Date(year.value, monthIndex, 1).toLocaleString('default', { month: 'long' })
 }
 
-function nextYear() {
-  currentYear.value++
+function getDaysInMonth(monthIndex: number) {
+  return new Date(year.value, monthIndex + 1, 0).getDate()
+}
+
+function getFirstDayOfMonth(monthIndex: number) {
+  return new Date(year.value, monthIndex, 1).getDay()
+}
+
+function getEventsForMonth(monthIndex: number) {
+  return store.events.filter(event => {
+    const date = new Date(event.startDate)
+    return date.getFullYear() === year.value && date.getMonth() === monthIndex
+  }).sort((a, b) => {
+    const timeA = new Date(a.startDate).getTime()
+    const timeB = new Date(b.startDate).getTime()
+    return timeA - timeB
+  })
+}
+
+function getEventDateDisplay(event: any) {
+    const start = new Date(event.startDate)
+    const end = new Date(event.endDate)
+
+    if (start.toDateString() === end.toDateString()) {
+        return start.getDate().toString()
+    } else if (start.getMonth() === end.getMonth()) {
+        return `${start.getDate()}-${end.getDate()}`
+    }
+    return `${start.getDate()}/${start.getMonth() + 1}-${end.getDate()}/${end.getMonth() + 1}`
+}
+
+function getDayStyle(monthIndex: number, day: number) {
+  const date = new Date(year.value, monthIndex, day)
+  date.setHours(0, 0, 0, 0)
+  const time = date.getTime()
+
+  const event = store.events.find(e => {
+    const start = new Date(e.startDate)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(e.endDate)
+    end.setHours(0, 0, 0, 0)
+    return time >= start.getTime() && time <= end.getTime()
+  })
+
+  if (event && event.color) {
+    return {
+      backgroundColor: event.color,
+      color: '#ffffff',
+      fontWeight: 'bold'
+    }
+  }
+  return {}
 }
 </script>
 
 <template>
-  <div>
-    <div class="flex justify-between items-center mb-6">
-      <Button variant="outline" size="icon" @click="prevYear">
-        <ChevronLeftIcon class="h-4 w-4" />
-      </Button>
-      <h2 class="text-2xl font-bold">{{ currentYear }}</h2>
-      <Button variant="outline" size="icon" @click="nextYear">
-        <ChevronRightIcon class="h-4 w-4" />
-      </Button>
-    </div>
-
-    <div class="flex flex-wrap gap-2 mb-4">
-      <div v-for="type in store.eventTypes" :key="type.name" class="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          :id="`checkbox-${type.name}`"
-          :checked="!store.hiddenEventTypes.has(type.name)"
-          @change="store.toggleEventTypeVisibility(type.name)"
-          class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
-        />
-        <label :for="`checkbox-${type.name}`" class="text-sm font-medium text-gray-700">{{ type.name }}</label>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div v-for="month in months" :key="month" class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm flex flex-col">
+      <h3 class="font-bold text-lg text-center mb-3 dark:text-white capitalize">{{ getMonthName(month) }}</h3>
+      
+      <!-- Calendar Grid -->
+      <div class="grid grid-cols-7 gap-1 text-center text-xs mb-4 text-gray-600 dark:text-gray-400">
+        <div v-for="day in ['S','M','T','W','T','F','S']" :key="day" class="font-bold">{{ day }}</div>
+        <div v-for="blank in getFirstDayOfMonth(month)" :key="`blank-${blank}`"></div>
+        <div v-for="day in getDaysInMonth(month)" :key="day" class="p-1">
+            <div 
+                class="w-6 h-6 flex items-center justify-center mx-auto rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                :style="getDayStyle(month, day)"
+            >
+                {{ day }}
+            </div>
+        </div>
       </div>
-    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      <Card v-for="month in months" :key="month.name">
-        <CardHeader>
-          <CardTitle class="text-center text-lg">{{ month.name }}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="grid grid-cols-7 gap-2 text-center text-sm">
-            <div v-for="day in weekDays" :key="day" class="font-semibold text-muted-foreground">{{ day }}</div>
-            <div v-for="blank in month.firstDayOfWeek" :key="'blank-' + blank"></div>
-                                                                                  <div
-                                                                                    v-for="day in month.days"
-                                                                                    :key="day.day"
-                                                                                    class="w-8 h-8 flex items-center justify-center rounded-full text-sm cursor-pointer"
-                                                                                    :style="{ backgroundColor: day.bgColor, color: day.bgColor !== 'transparent' ? 'white' : 'inherit' }"
-                                                                                    @click="() => {
-                                                                                      if (day.events && day.events.length > 0) {
-                                                                                        store.selectedEvent = day.events[0];
-                                                                                      }
-                                                                                    }"
-                                                                                  >              {{ day.day }}
-                                                                  </div>          </div>
-        </CardContent>
-      </Card>
+      <!-- Events List -->
+      <div class="space-y-2 border-t dark:border-gray-700 pt-2 mt-auto">
+        <div v-for="event in getEventsForMonth(month)" :key="event.id" class="text-xs flex items-start space-x-2">
+            <span class="font-bold text-blue-600 dark:text-blue-400 shrink-0 text-right min-w-[1.25rem]">{{ getEventDateDisplay(event) }}</span>
+            <span class="truncate text-gray-800 dark:text-gray-200" :title="event.type" :style="{ color: event.color }">{{ event.type }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>

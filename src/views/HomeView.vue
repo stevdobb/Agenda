@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
 import InstallButton from '@/components/InstallButton.vue'
@@ -62,7 +61,7 @@ function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
     fetchStart.setDate(startOfWeek.getDate() - 7 * 2);
     fetchEnd = new Date(endOfWeek);
     fetchEnd.setDate(endOfWeek.getDate() + 7 * 2);
-  } else { // month view
+  } else {
     const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
     startOfMonth.setHours(0, 0, 0, 0);
     fetchStart = new Date(startOfMonth);
@@ -297,9 +296,6 @@ function isEventToday(event: any): boolean {
 function handleLogin() {
   requestAccessToken();
 }
-
-const route = useRoute()
-const isYearActive = computed(() => route.path === '/year' || route.path.startsWith('/year'))
 </script>
 
 <template>
@@ -317,7 +313,6 @@ const isYearActive = computed(() => route.path === '/year' || route.path.startsW
         <button @click="currentView = 'list'" :class="{'bg-blue-500 text-white': currentView === 'list', 'bg-gray-200 dark:bg-gray-700': currentView !== 'list'}" class="px-3 py-1 rounded-md transition">List</button>
         <button @click="currentView = 'week'" :class="{'bg-blue-500 text-white': currentView === 'week', 'bg-gray-200 dark:bg-gray-700': currentView !== 'week'}" class="px-3 py-1 rounded-md transition">Week</button>
         <button @click="currentView = 'month'" :class="{'bg-blue-500 text-white': currentView === 'month', 'bg-gray-200 dark:bg-gray-700': currentView !== 'month'}" class="px-3 py-1 rounded-md transition">Month</button>
-        <router-link to="/year" :class="{ 'bg-blue-500 text-white': isYearActive, 'bg-gray-200 dark:bg-gray-700': !isYearActive }" class="px-3 py-1 rounded-md transition">Year</router-link>
         <button @click="manualFetchEvents" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition" aria-label="Refresh Events">
           <ArrowPathIcon class="h-5 w-5 text-gray-700 dark:text-gray-300" />
         </button>
