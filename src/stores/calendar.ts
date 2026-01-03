@@ -35,7 +35,8 @@ const defaultEventTypes: EventType[] = [
   { name: 'Verlof', color: '#1976D2' },
   { name: 'halve dag verlof', color: '#42A5F5' },
   { name: 'Venise', color: '#388E3C' },
-  { name: 'Loopwedstrijd', color: '#FBC02D' }
+  { name: 'Loopwedstrijd', color: '#FBC02D' },
+  { name: 'Extra op te nemen verlofdag / overuren', color: '#7E57C2' }
 ]
 
 export const useCalendarStore = defineStore('calendar', () => {
@@ -68,6 +69,11 @@ export const useCalendarStore = defineStore('calendar', () => {
     } else {
       eventTypes.value.push(halfDayLeaveType);
     }
+  }
+
+  const extraLeaveType = { name: 'Extra op te nemen verlofdag / overuren', color: '#7E57C2' };
+  if (!eventTypes.value.some(type => type.name === extraLeaveType.name)) {
+    eventTypes.value.push(extraLeaveType);
   }
 
   if (storedHiddenTypes) {
@@ -269,7 +275,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     let plannedDays = 0
     const currentYear = new Date().getFullYear()
     const allHolidays = getBelgianHolidays(currentYear).map((h) => h.date)
-    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie'])
+    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie', 'Extra op te nemen verlofdag / overuren'])
 
     events.value.forEach((event) => {
       const resolvedType = getEventTypeNameForEvent(event) ?? event.type
@@ -301,7 +307,7 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const monthlyLeaveStats = computed(() => {
     const monthlyUsed = Array.from({ length: 12 }, () => 0);
-    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie']);
+    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie', 'Extra op te nemen verlofdag / overuren']);
     const currentYear = new Date().getFullYear();
     const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
   
