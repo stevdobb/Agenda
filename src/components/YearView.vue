@@ -10,6 +10,7 @@ const schoolHolidayTypeName = 'Schoolvakantie'
 const schoolHolidayColor = computed(() => {
   return store.eventTypes.find((type) => type.name === schoolHolidayTypeName)?.color
 })
+const monthlyStats = computed(() => store.monthlyLeaveStats)
 
 function getMonthName(monthIndex: number) {
   return new Date(year.value, monthIndex, 1).toLocaleString('nl-NL', { month: 'long' })
@@ -140,6 +141,10 @@ function getDayBorderClass(monthIndex: number, day: number) {
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
     <div v-for="month in months" :key="month" class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm flex flex-col">
       <h3 class="font-bold text-lg text-center mb-3 dark:text-white capitalize">{{ getMonthName(month) }}</h3>
+      
+      <div v-if="monthlyStats[month] > 0" class="text-xs text-center mb-2 text-gray-500 dark:text-gray-400">
+        <span>Gebruikt: {{ monthlyStats[month] }}</span>
+      </div>
       
       <!-- Calendar Grid -->
       <div class="grid grid-cols-7 gap-1 text-center text-xs mb-4 text-gray-600 dark:text-gray-400">

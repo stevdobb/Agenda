@@ -299,6 +299,38 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
   })
 
+  const monthlyLeaveStats = computed(() => {
+    const monthlyUsed = Array.from({ length: 12 }, () => 0);
+    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie']);
+    const currentYear = new Date().getFullYear();
+    const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
+  
+    events.value.forEach(event => {
+      const resolvedType = getEventTypeNameForEvent(event) ?? event.type;
+      if (!excludedTypes.has(resolvedType)) {
+        const start = new Date(event.startDate);
+        const end = new Date(event.endDate);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          // Process only events within the current year for monthly stats
+          if (start.getFullYear() > currentYear || end.getFullYear() < currentYear) {
+            return;
+          }
+
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            if (d.getFullYear() === currentYear) {
+                if (calculateWorkingDays(new Date(d), new Date(d), allHolidays) === 1) {
+                    const month = d.getMonth();
+                    const dayValue = resolvedType === 'halve dag verlof' ? 0.5 : 1;
+                    monthlyUsed[month] += dayValue;
+                }
+            }
+          }
+        }
+      }
+    });
+    return monthlyUsed;
+  });
+
   return {
     events,
     eventTypes,
@@ -310,6 +342,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     setData,
     clearData,
     leaveDayStats,
+    monthlyLeaveStats,
     selectedEvent,
     hiddenEventTypes, // New: Return hiddenEventTypes
     toggleEventTypeVisibility, // New: Return toggleEventTypeVisibility
