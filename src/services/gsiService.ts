@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth';
+import { useUiStore } from '@/stores/ui';
 
 const GOOGLE_CLIENT_ID = '350064938484-i5mqo80eieq2e966i10kus824r4p7pmc.apps.googleusercontent.com';
 
@@ -7,6 +8,7 @@ let tokenClient: google.accounts.oauth2.TokenClient | undefined;
 // This function handles the response from Google after a token is received
 const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) => {
   const authStore = useAuthStore();
+  const uiStore = useUiStore();
   if (tokenResponse && tokenResponse.access_token && tokenResponse.expires_in) {
     try {
       // Fetch user profile
@@ -33,7 +35,7 @@ const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) 
       await authStore.fetchUpcomingEvents();
     } catch (error: any) {
       console.error("Login failed:", error);
-      alert(`Login failed: ${error.message}`);
+      uiStore.showAlert('Login Failed', error.message);
     }
   }
 };
@@ -60,6 +62,7 @@ export function initializeGsi(): Promise<void> {
 
 // Prompts the user for a new access token
 export function requestAccessToken(options?: { prompt: string }) {
+  const uiStore = useUiStore();
   if (tokenClient) {
     if (options?.prompt) {
       tokenClient.requestAccessToken({ prompt: options.prompt });
@@ -71,6 +74,6 @@ export function requestAccessToken(options?: { prompt: string }) {
     // Optionally, try to initialize it now
     initializeGsi().then(() => {
       tokenClient?.requestAccessToken();
-    }).catch(error => alert(error.message));
+    }).catch(error => uiStore.showAlert('Error', error.message));
   }
 }

@@ -6,11 +6,13 @@ import { Dialog, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import { Bars3Icon, XMarkIcon, Cog6ToothIcon } from '@heroicons/vue/24/solid'
 import { Button } from '@/components/ui/button'
 import { useCalendarStore } from '@/stores/calendar'
+import { useUiStore } from '@/stores/ui'
 import { parseIcsContent } from '@/services/icsService'
 
 
 const router = useRouter()
 const calendarStore = useCalendarStore()
+const uiStore = useUiStore()
 
 const mobileMenuOpen = ref(false)
 const showSettingsModal = ref(false)
@@ -63,12 +65,12 @@ function importData(event: Event) {
       const data = JSON.parse(e.target?.result as string)
       if (data.events && data.eventTypes) {
         calendarStore.setData({ newEvents: data.events, newTypes: data.eventTypes })
-        alert('Data geïmporteerd!')
+        uiStore.showAlert('Data Import', 'Data geïmporteerd!')
       } else {
-        alert('Ongeldig bestandsformaat.')
+        uiStore.showAlert('Import Error', 'Ongeldig bestandsformaat.')
       }
     } catch (error) {
-      alert('Fout bij het lezen van het bestand.')
+      uiStore.showAlert('Import Error', 'Fout bij het lezen van het bestand.')
       console.error(error)
     }
   }
@@ -101,9 +103,9 @@ async function importIcsData(event: Event) {
                 color: finalIcsEventType.color
             })
         })
-        alert(`${parsedEvents.length} events from ICS imported!`)
+        uiStore.showAlert('ICS Import', `${parsedEvents.length} events from ICS imported!`)
       } else {
-          alert('Could not find or create "ICS Event" type.')
+        uiStore.showAlert('ICS Import Error', 'Could not find or create "ICS Event" type.')
       }
 
       if (importIcsFile.value) {
@@ -111,7 +113,7 @@ async function importIcsData(event: Event) {
       }
 
     } catch (error) {
-      alert('Fout bij het lezen of parsen van het ICS-bestand.')
+      uiStore.showAlert('ICS Import Error', 'Fout bij het lezen of parsen van het ICS-bestand.')
       console.error(error)
     }
   }

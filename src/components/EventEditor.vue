@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useCalendarStore, type EventType, type CalendarEvent } from '@/stores/calendar'
+import { useUiStore } from '@/stores/ui'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import Litepicker from '@/components/Litepicker.vue'
 
 const store = useCalendarStore()
+const uiStore = useUiStore()
 
 // No longer need props.initialEvent, will directly use store.selectedEvent
 // const props = defineProps<{
@@ -99,7 +101,7 @@ watch(dateRange, (newRange) => {
 
 function saveEvent() {
   if (!startDate.value || !endDate.value || !selectedType.value) {
-    alert('Please fill in all fields.')
+    uiStore.showAlert('Validation Error', 'Please fill in all fields.')
     return
   }
 
@@ -120,8 +122,8 @@ function saveEvent() {
   }
   
   if (!eventType) {
-      alert('Selected event type not found.')
-      return
+    uiStore.showAlert('Error', 'Selected event type not found.')
+    return
   }
 
   const eventData: Omit<CalendarEvent, 'id'> = {

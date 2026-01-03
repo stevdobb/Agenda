@@ -88,25 +88,33 @@ function getDayWrapperClass(monthIndex: number, day: number) {
   return isSchoolHolidayDay(monthIndex, day) ? 'bg-gray-200 dark:bg-gray-700' : ''
 }
 
-function getDayStyle(monthIndex: number, day: number) {
-  const date = new Date(year.value, monthIndex, day)
-  date.setHours(0, 0, 0, 0)
-  const time = date.getTime()
+function getEventForDay(monthIndex: number, day: number): CalendarEvent | undefined {
+  const date = new Date(year.value, monthIndex, day);
+  date.setHours(0, 0, 0, 0);
+  const time = date.getTime();
 
-  const event = store.events.find((e) => {
+  return store.events.find((e) => {
     if (!isEventVisible(e)) {
-      return false
+      return false;
     }
     if (!isDateInRange(e, time)) {
-      return false
+      return false;
     }
     if (isSchoolHolidayEvent(e)) {
-      return false
+      return false;
     }
-    return true
-  })
+    return true;
+  });
+}
+
+function getDayStyle(monthIndex: number, day: number) {
+  const event = getEventForDay(monthIndex, day);
 
   if (event && event.color) {
+    const resolvedType = store.getEventTypeNameForEvent(event) ?? event.type;
+    if (resolvedType === 'halve dag verlof') {
+      return {}; // No special style for the inner div
+    }
     return {
       backgroundColor: event.color,
       color: '#ffffff',
@@ -114,6 +122,17 @@ function getDayStyle(monthIndex: number, day: number) {
     }
   }
   return {}
+}
+
+function getDayBorderClass(monthIndex: number, day: number) {
+  const event = getEventForDay(monthIndex, day);
+  if (event) {
+    const resolvedType = store.getEventTypeNameForEvent(event) ?? event.type;
+    if (resolvedType === 'halve dag verlof') {
+      return 'border-r-2 border-t-2 border-black';
+    }
+  }
+  return '';
 }
 </script>
 
@@ -126,7 +145,11 @@ function getDayStyle(monthIndex: number, day: number) {
       <div class="grid grid-cols-7 gap-1 text-center text-xs mb-4 text-gray-600 dark:text-gray-400">
         <div v-for="day in ['M','D','W','D','V','Z','Z']" :key="day" class="font-bold">{{ day }}</div>
         <div v-for="blank in getFirstDayOfMonth(month)" :key="`blank-${blank}`"></div>
-        <div v-for="day in getDaysInMonth(month)" :key="day" :class="['p-1', getDayWrapperClass(month, day)]">
+        <div 
+          v-for="day in getDaysInMonth(month)" 
+          :key="day" 
+          :class="['p-1', getDayWrapperClass(month, day), getDayBorderClass(month, day)]"
+        >
             <div 
                 class="w-6 h-6 flex items-center justify-center mx-auto rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                 :style="getDayStyle(month, day)"

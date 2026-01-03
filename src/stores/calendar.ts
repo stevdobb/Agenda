@@ -33,6 +33,7 @@ const defaultEventTypes: EventType[] = [
   { name: 'Wettelijke feestdag', color: '#D32F2F' },
   { name: 'Schoolvakantie', color: '#D3D3D3' },
   { name: 'Verlof', color: '#1976D2' },
+  { name: 'halve dag verlof', color: '#42A5F5' },
   { name: 'Venise', color: '#388E3C' },
   { name: 'Loopwedstrijd', color: '#FBC02D' }
 ]
@@ -56,6 +57,17 @@ export const useCalendarStore = defineStore('calendar', () => {
     eventTypes.value = JSON.parse(storedTypes)
   } else {
     eventTypes.value = defaultEventTypes
+  }
+
+  // Ensure 'halve dag verlof' is always present
+  const halfDayLeaveType = { name: 'halve dag verlof', color: '#42A5F5' };
+  if (!eventTypes.value.some(type => type.name === halfDayLeaveType.name)) {
+    const verlofIndex = eventTypes.value.findIndex(type => type.name === 'Verlof');
+    if (verlofIndex !== -1) {
+      eventTypes.value.splice(verlofIndex + 1, 0, halfDayLeaveType);
+    } else {
+      eventTypes.value.push(halfDayLeaveType);
+    }
   }
 
   if (storedHiddenTypes) {
@@ -255,29 +267,29 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const leaveDayStats = computed(() => {
     let plannedDays = 0
-    const currentYear = new Date().getFullYear();
-    const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
-    const excludedTypes = new Set([
-      'Wettelijke feestdag',
-      'Venise',
-      'Loopwedstrijd',
-      'Schoolvakantie',
-    ])
+    const currentYear = new Date().getFullYear()
+    const allHolidays = getBelgianHolidays(currentYear).map((h) => h.date)
+    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie'])
 
-    events.value.forEach(event => {
+    events.value.forEach((event) => {
       const resolvedType = getEventTypeNameForEvent(event) ?? event.type
       if (excludedTypes.has(resolvedType)) {
         return
       }
 
-      const start = new Date(event.startDate);
-      const end = new Date(event.endDate);
-      
+      const start = new Date(event.startDate)
+      const end = new Date(event.endDate)
+
       // Ensure start and end dates are valid before calculating
       if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        plannedDays += calculateWorkingDays(start, end, allHolidays);
+        const workingDays = calculateWorkingDays(start, end, allHolidays)
+        if (resolvedType === 'halve dag verlof') {
+          plannedDays += workingDays * 0.5
+        } else {
+          plannedDays += workingDays
+        }
       }
-    });
+    })
 
     const remainingDays = TOTAL_LEAVE_DAYS - plannedDays
     return {
@@ -303,5 +315,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     toggleEventTypeVisibility, // New: Return toggleEventTypeVisibility
     isEventHidden,
     updateEventTypeColor,
+    getEventTypeNameForEvent,
   };
 })

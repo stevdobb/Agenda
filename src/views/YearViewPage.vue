@@ -13,12 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import TopMenu from '@/components/TopMenu.vue'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
+import { useUiStore } from '@/stores/ui'
 import { parseIcsContent, type ParsedIcsEvent } from '@/services/icsService' // New: Import ICS service
 
 // import type { DateRange } from 'radix-vue' // Import DateRange type
 
 const router = useRouter()
 const store = useCalendarStore()
+const uiStore = useUiStore()
 const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
 const showConfirmModal = ref(false)
@@ -66,12 +68,12 @@ function importData(event: Event) {
       const data = JSON.parse(e.target?.result as string)
       if (data.events && data.eventTypes) {
         store.setData({ newEvents: data.events, newTypes: data.eventTypes })
-        alert('Data geïmporteerd!')
+        uiStore.showAlert('Data Import', 'Data geïmporteerd!')
       } else {
-        alert('Ongeldig bestandsformaat.')
+        uiStore.showAlert('Import Error', 'Ongeldig bestandsformaat.')
       }
     } catch (error) {
-      alert('Fout bij het lezen van het bestand.')
+      uiStore.showAlert('Import Error', 'Fout bij het lezen van het bestand.')
       console.error(error)
     }
   }
@@ -106,9 +108,9 @@ async function importIcsData(event: Event) { // New: Handle ICS file import
                 color: finalIcsEventType.color // Use the color of the generic ICS Event type
             })
         })
-        alert(`${parsedEvents.length} events from ICS imported!`)
+        uiStore.showAlert('ICS Import', `${parsedEvents.length} events from ICS imported!`)
       } else {
-          alert('Could not find or create "ICS Event" type.')
+        uiStore.showAlert('ICS Import Error', 'Could not find or create "ICS Event" type.')
       }
 
       // Clear the file input value to allow re-importing the same file
@@ -117,7 +119,7 @@ async function importIcsData(event: Event) { // New: Handle ICS file import
       }
 
     } catch (error) {
-      alert('Fout bij het lezen of parsen van het ICS-bestand.')
+      uiStore.showAlert('ICS Import Error', 'Fout bij het lezen of parsen van het ICS-bestand.')
       console.error(error)
     }
   }
