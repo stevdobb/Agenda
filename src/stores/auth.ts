@@ -48,20 +48,15 @@ export const useAuthStore = defineStore('auth', () => {
     return allAggregatedEvents;
   });
 
-  function checkDarkMode() {
-    if (localStorage.theme === 'light') {
-      document.documentElement.classList.remove('dark')
-      isDarkMode.value = false
-    } else if (localStorage.theme === 'dark') {
-      document.documentElement.classList.add('dark')
-      isDarkMode.value = true
-    } else {
-      // Default to light mode if no theme is set
-      localStorage.theme = 'light'
-      document.documentElement.classList.remove('dark')
-      isDarkMode.value = false
-    }
+function checkDarkMode() {
+  if (localStorage.theme === 'dark') {
+    document.documentElement.classList.add('dark')
+    isDarkMode.value = true
+  } else {
+    document.documentElement.classList.remove('dark')
+    isDarkMode.value = false
   }
+}
 
   function toggleDarkMode() {
     isDarkMode.value = !isDarkMode.value

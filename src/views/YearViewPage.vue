@@ -14,7 +14,7 @@ import TopMenu from '@/components/TopMenu.vue'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
-import { parseIcsContent, type ParsedIcsEvent } from '@/services/icsService' // New: Import ICS service
+import { parseIcsContent, exportIcsContent, type ParsedIcsEvent } from '@/services/icsService' // New: Import ICS service
 
 // import type { DateRange } from 'radix-vue' // Import DateRange type
 
@@ -48,6 +48,22 @@ function exportData() {
   a.download = `calendar-data-${dateStamp}-${timeStamp}.json`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function exportIcs() {
+  const now = new Date();
+  const pad = (value: number) => value.toString().padStart(2, '0');
+  const dateStamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const timeStamp = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+  const icsString = exportIcsContent(store.events);
+  const blob = new Blob([icsString], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `calendar-export-${dateStamp}-${timeStamp}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function triggerImport() {
@@ -201,7 +217,8 @@ async function scrollToEventEditor() {
             <CardTitle>Data Management</CardTitle>
           </CardHeader>
           <CardContent class="flex flex-wrap gap-4">
-            <Button @click="exportData">Export</Button>
+            <Button @click="exportData">Export JSON</Button>
+            <Button @click="exportIcs">Export ICS</Button>
             <Button @click="triggerImport" variant="outline">Import JSON</Button>
             <Button @click="triggerIcsImport" variant="outline">Import ICS</Button>
             <Button @click="showConfirmModal = true" variant="destructive">Restart</Button>

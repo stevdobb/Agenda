@@ -127,16 +127,16 @@ export const useCalendarStore = defineStore('calendar', () => {
         const runningRaceType = defaultEventTypes.find(t => t.name === 'Loopwedstrijd');
         if (runningRaceType) {
             const runningRaceEventsData: RunningRaceData[] = [
-                // { summary: 'Loop van de Kust – Zeebrugge', dtstart: '20260703T200000', dtend: '20260703T220000' },
-                // { summary: 'Loop van de Kust – Oostende', dtstart: '20260710T193000', dtend: '20260710T213000' },
-                // { summary: 'Loop van de Kust – Knokke-Heist', dtstart: '20260712T193000', dtend: '20260712T213000' },
-                // { summary: 'Loop van de Kust – Koksijde', dtstart: '20260715T200000', dtend: '20260715T220000' },
-                // { summary: 'Loop van de Kust – De Panne', dtstart: '20260727T193000', dtend: '20260727T213000' },
-                // { summary: 'Loop van de Kust – Wenduine', dtstart: '20260731T200000', dtend: '20260731T220000' },
-                // { summary: 'Loop van de Kust – Blankenberge', dtstart: '20260801T193000', dtend: '20260801T213000' },
-                // { summary: 'Loop van de Kust – Nieuwpoort', dtstart: '20260810T193000', dtend: '20260810T213000' },
-                // { summary: 'Loop van de Kust – Bredene', dtstart: '20260814T193000', dtend: '20260814T213000' },
-                // { summary: 'Loop van de Kust – Middelkerke', dtstart: '20260828T200000', dtend: '20260828T220000' },
+                // { summary: 'Loopcriterium – Zeebrugge', dtstart: '20260703T200000', dtend: '20260703T220000' },
+                // { summary: 'Loopcriterium – Oostende', dtstart: '20260710T193000', dtend: '20260710T213000' },
+                // { summary: 'Loopcriterium – Knokke-Heist', dtstart: '20260712T193000', dtend: '20260712T213000' },
+                // { summary: 'Loopcriterium – Koksijde', dtstart: '20260715T200000', dtend: '20260715T220000' },
+                // { summary: 'Loopcriterium – De Panne', dtstart: '20260727T193000', dtend: '20260727T213000' },
+                // { summary: 'Loopcriterium – Wenduine', dtstart: '20260731T200000', dtend: '20260731T220000' },
+                // { summary: 'Loopcriterium – Blankenberge', dtstart: '20260801T193000', dtend: '20260801T213000' },
+                // { summary: 'Loopcriterium – Nieuwpoort', dtstart: '20260810T193000', dtend: '20260810T213000' },
+                // { summary: 'Loopcriterium – Bredene', dtstart: '20260814T193000', dtend: '20260814T213000' },
+                // { summary: 'Loopcriterium – Middelkerke', dtstart: '20260828T200000', dtend: '20260828T220000' },
             ];
 
             const runningRaceEvents: CalendarEvent[] = runningRaceEventsData.map(race => ({

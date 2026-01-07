@@ -1,4 +1,5 @@
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
+import type { CalendarEvent } from '@/stores/calendar';
 
 export interface ParsedIcsEvent {
   uid: string;
@@ -85,4 +86,38 @@ export function parseIcsContent(icsContent: string): ParsedIcsEvent[] {
   }
 
   return events;
+}
+
+export function exportIcsContent(events: CalendarEvent[]): string {
+  let icsString = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//YourApp//EN',
+  ].join('\r\n') + '\r\n';
+
+  events.forEach(event => {
+    const start = parseISO(event.startDate);
+    const end = parseISO(event.endDate);
+    const endPlusOne = addDays(end, 1);
+
+    const startDateFormatted = format(start, 'yyyyMMdd');
+    const endDateFormatted = format(endPlusOne, 'yyyyMMdd');
+    const nowFormatted = format(new Date(), "yyyyMMdd'T'HHmmss'Z'");
+
+    const summary = event.customName || event.type;
+
+    icsString += [
+      'BEGIN:VEVENT',
+      `UID:${event.id}@yourapp.com`,
+      `DTSTAMP:${nowFormatted}`,
+      `DTSTART;VALUE=DATE:${startDateFormatted}`,
+      `DTEND;VALUE=DATE:${endDateFormatted}`,
+      `SUMMARY:${summary}`,
+      'END:VEVENT'
+    ].join('\r\n') + '\r\n';
+  });
+
+  icsString += 'END:VCALENDAR\r\n';
+
+  return icsString;
 }
