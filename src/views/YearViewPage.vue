@@ -217,12 +217,12 @@ async function scrollToEventEditor() {
           </CardHeader>
           <CardContent class="flex flex-col gap-4">
             <div class="flex flex-wrap gap-4">
-              <Button @click="triggerImport"><FilePlus class="mr-2 h-4 w-4" /> Importeer JSON</Button>
-              <Button @click="exportData"><FileText class="mr-2 h-4 w-4" /> Exporteer JSON</Button>
+              <Button @click="triggerImport"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
+              <Button @click="exportData"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
             </div>
             <div class="flex flex-wrap gap-4">
-              <Button @click="triggerIcsImport" class="bg-green-700 text-primary-foreground hover:bg-green-800"><CalendarPlus class="mr-2 h-4 w-4" /> Importeer ICS</Button>
-              <Button @click="exportIcs" class="bg-green-700 text-primary-foreground hover:bg-green-800"><Calendar class="mr-2 h-4 w-4" /> Exporteer ICS</Button>
+              <Button @click="triggerIcsImport" class="bg-green-700 text-primary-foreground hover:bg-green-800"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
+              <Button @click="exportIcs" class="bg-green-700 text-primary-foreground hover:bg-green-800"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
             </div>
             <div class="flex flex-wrap gap-4">
               <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Herstarten</Button>
