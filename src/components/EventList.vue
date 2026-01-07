@@ -85,7 +85,7 @@ function formatEventDates(event: CalendarEvent): string {
                 <span class="text-xs text-muted-foreground tabular-nums shrink-0">
                   {{ formatEventDates(event) }}
                 </span>
-                <p class="font-medium truncate">{{ event.type }}</p>
+                <p class="font-medium truncate">{{ event.customName || event.type }}</p>
               </div>
               <div class="flex items-center gap-1">
                 <Button variant="outline" size="icon" @click="editEvent(event)">

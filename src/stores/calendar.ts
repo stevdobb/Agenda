@@ -11,6 +11,7 @@ export interface CalendarEvent {
   endDate: string
   type: string
   color: string
+  customName?: string
 }
 
 export interface EventType {
@@ -29,6 +30,8 @@ const TYPES_STORAGE_KEY = 'calendarEventTypes'
 const HIDDEN_TYPES_STORAGE_KEY = 'hiddenEventTypes' // New: Storage key for hidden event types
 const TOTAL_LEAVE_DAYS = 32 // Fixed total leave days
 
+const excludedTypesForLeave = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie', 'Extra op te nemen verlofdag / overuren', 'Custom event (telt niet mee als verlofdag)']);
+
 const defaultEventTypes: EventType[] = [
   { name: 'Wettelijke feestdag', color: '#D32F2F' },
   { name: 'Schoolvakantie', color: '#D3D3D3' },
@@ -36,7 +39,8 @@ const defaultEventTypes: EventType[] = [
   { name: 'halve dag verlof', color: '#42A5F5' },
   { name: 'Venise', color: '#388E3C' },
   { name: 'Loopwedstrijd', color: '#FBC02D' },
-  { name: 'Extra op te nemen verlofdag / overuren', color: '#7E57C2' }
+  { name: 'Extra op te nemen verlofdag / overuren', color: '#7E57C2' },
+  { name: 'Custom event (telt niet mee als verlofdag)', color: '#808080' }
 ]
 
 export const useCalendarStore = defineStore('calendar', () => {
@@ -44,6 +48,10 @@ export const useCalendarStore = defineStore('calendar', () => {
   const eventTypes = ref<EventType[]>([])
   const selectedEvent = ref<CalendarEvent | null>(null) // New: To store the event being edited
   const hiddenEventTypes = ref<Set<string>>(new Set()) // New: To store event types that are currently hidden
+
+  const includedLeaveTypes = computed(() => {
+    return eventTypes.value.filter(type => !excludedTypesForLeave.has(type.name));
+  });
 
   // Load from localStorage
   const storedEvents = localStorage.getItem(STORAGE_KEY)
@@ -74,6 +82,11 @@ export const useCalendarStore = defineStore('calendar', () => {
   const extraLeaveType = { name: 'Extra op te nemen verlofdag / overuren', color: '#7E57C2' };
   if (!eventTypes.value.some(type => type.name === extraLeaveType.name)) {
     eventTypes.value.push(extraLeaveType);
+  }
+
+  const customEventType = { name: 'Custom event (telt niet mee als verlofdag)', color: '#808080' };
+  if (!eventTypes.value.some(type => type.name === customEventType.name)) {
+    eventTypes.value.push(customEventType);
   }
 
   if (storedHiddenTypes) {
@@ -275,7 +288,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     let plannedDays = 0
     const currentYear = new Date().getFullYear()
     const allHolidays = getBelgianHolidays(currentYear).map((h) => h.date)
-    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie', 'Extra op te nemen verlofdag / overuren'])
+    const excludedTypes = excludedTypesForLeave
 
     events.value.forEach((event) => {
       const resolvedType = getEventTypeNameForEvent(event) ?? event.type
@@ -307,7 +320,7 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const monthlyLeaveStats = computed(() => {
     const monthlyUsed = Array.from({ length: 12 }, () => 0);
-    const excludedTypes = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie', 'Extra op te nemen verlofdag / overuren']);
+    const excludedTypes = excludedTypesForLeave;
     const currentYear = new Date().getFullYear();
     const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
   
@@ -355,5 +368,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     isEventHidden,
     updateEventTypeColor,
     getEventTypeNameForEvent,
+    includedLeaveTypes,
   };
 })

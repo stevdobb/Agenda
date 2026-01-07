@@ -168,7 +168,7 @@ function getDayBorderClass(monthIndex: number, day: number) {
       <div class="space-y-2 border-t dark:border-gray-700 pt-2 mt-auto">
         <div v-for="event in getEventsForMonth(month)" :key="event.id" class="text-xs flex items-start space-x-2">
             <span class="font-bold text-blue-600 dark:text-blue-400 shrink-0 text-right min-w-[1.25rem]">{{ getEventDateDisplay(event) }}</span>
-            <span class="truncate text-gray-800 dark:text-gray-200" :title="event.type" :style="{ color: event.color }">{{ event.type }}</span>
+            <span class="truncate text-gray-800 dark:text-gray-200" :title="event.customName || event.type" :style="{ color: event.color }">{{ event.customName || event.type }}</span>
         </div>
       </div>
     </div>

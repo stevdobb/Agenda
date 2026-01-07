@@ -188,6 +188,12 @@ async function scrollToEventEditor() {
               <span>Remaining:</span>
               <span class="font-semibold">{{ store.leaveDayStats.remaining }}</span>
             </div>
+            <div class="mt-4 text-xs text-gray-500 dark:text-gray-400 border-t pt-2">
+              <p class="font-semibold">Included as leave:</p>
+              <ul class="list-disc pl-4">
+                <li v-for="type in store.includedLeaveTypes" :key="type.name">{{ type.name }}</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
         <Card>

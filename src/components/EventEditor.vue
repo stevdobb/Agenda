@@ -25,6 +25,7 @@ const endDate = ref('')
 const dateRange = ref('')
 const selectedType = ref('')
 const customTypeName = ref('')
+const customName = ref('')
 const customTypeColor = ref('#000000')
 const isCreatingCustomType = ref(false)
 const dateRangeDelimiter = ' - '
@@ -77,6 +78,7 @@ watch(() => store.selectedEvent, (newEvent) => {
     endDate.value = newEvent.endDate || '';
     dateRange.value = formatDateRange(startDate.value, endDate.value)
     selectedType.value = newEvent.type
+    customName.value = newEvent.customName || ''
     // Reset custom type fields
     isCreatingCustomType.value = false
     customTypeName.value = ''
@@ -87,6 +89,7 @@ watch(() => store.selectedEvent, (newEvent) => {
     endDate.value = ''
     dateRange.value = ''
     selectedType.value = store.eventTypes[0]?.name || '' // Select the first available type or empty
+    customName.value = ''
     isCreatingCustomType.value = false
     customTypeName.value = ''
     customTypeColor.value = '#000000'
@@ -131,6 +134,7 @@ function saveEvent() {
     endDate: endDate.value,
     type: eventType.name,
     color: eventType.color,
+    customName: customName.value
   }
 
   if (store.selectedEvent) {
@@ -171,6 +175,10 @@ function saveEvent() {
             <option v-for="type in store.eventTypes" :key="type.name" :value="type.name">{{ type.name }}</option>
             <option value="custom">-- Create Custom Type --</option>
           </select>
+        </div>
+        <div class="md:col-span-2 space-y-2">
+          <Label for="custom-name">Custom Name</Label>
+          <Input id="custom-name" type="text" v-model="customName" placeholder="Enter a custom name (optional)" />
         </div>
         <div v-if="selectedType && selectedType !== 'custom'" class="md:col-span-2 space-y-2">
           <Label for="event-type-color">Event Type Color</Label>
