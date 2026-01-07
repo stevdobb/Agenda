@@ -44,7 +44,7 @@ const groupedEvents = computed(() => {
 });
 
 function deleteEvent(id: string) {
-    if (confirm('Are you sure you want to delete this event?')) {
+    if (confirm('Weet je zeker dat je dit evenement wilt verwijderen?')) {
         store.removeEvent(id)
     }
 }
@@ -55,8 +55,8 @@ function editEvent(event: CalendarEvent) {
 }
 
 function formatEventDates(event: CalendarEvent): string {
-    const start = new Date(event.startDate).toLocaleDateString();
-    const end = new Date(event.endDate).toLocaleDateString();
+    const start = new Date(event.startDate).toLocaleDateString('nl-NL');
+    const end = new Date(event.endDate).toLocaleDateString('nl-NL');
     if (start === end) {
         return start;
     }
@@ -67,11 +67,11 @@ function formatEventDates(event: CalendarEvent): string {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle>All Events</CardTitle>
+      <CardTitle>Alle Evenementen</CardTitle>
     </CardHeader>
     <CardContent>
       <div v-if="groupedEvents.length === 0" class="text-center text-muted-foreground">
-        No events added yet.
+        Nog geen evenementen toegevoegd.
       </div>
       <div class="space-y-4">
         <div v-for="group in groupedEvents" :key="group.key">

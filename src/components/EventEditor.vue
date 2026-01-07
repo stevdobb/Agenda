@@ -104,7 +104,7 @@ watch(dateRange, (newRange) => {
 
 function saveEvent() {
   if (!startDate.value || !endDate.value || !selectedType.value) {
-    uiStore.showAlert('Validation Error', 'Please fill in all fields.')
+    uiStore.showAlert('Validatiefout', 'Vul alstublieft alle velden in.')
     return
   }
 
@@ -125,7 +125,7 @@ function saveEvent() {
   }
   
   if (!eventType) {
-    uiStore.showAlert('Error', 'Selected event type not found.')
+    uiStore.showAlert('Fout', 'Geselecteerd evenemententype niet gevonden.')
     return
   }
 
@@ -156,49 +156,49 @@ function saveEvent() {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle>Add/Edit Event</CardTitle>
+      <CardTitle>Evenement Toevoegen/Bewerken</CardTitle>
     </CardHeader>
     <CardContent>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="md:col-span-2 space-y-2">
-          <Label for="date-range">Date Range</Label>
+          <Label for="date-range">Datumbereik</Label>
           <Litepicker
             id="date-range"
             v-model="dateRange"
             :options="litepickerOptions"
-            placeholder="Select a date range"
+            placeholder="Selecteer een datumbereik"
           />
         </div>
         <div class="md:col-span-2 space-y-2">
-          <Label for="event-type">Event Type</Label>
+          <Label for="event-type">Type Evenement</Label>
           <select id="event-type" v-model="selectedType" @change="isCreatingCustomType = selectedType === 'custom'" class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
             <option v-for="type in store.eventTypes" :key="type.name" :value="type.name">{{ type.name }}</option>
-            <option value="custom">-- Create Custom Type --</option>
+            <option value="custom">-- Maak een Aangepast Type --</option>
           </select>
         </div>
         <div class="md:col-span-2 space-y-2">
-          <Label for="custom-name">Custom Name</Label>
-          <Input id="custom-name" type="text" v-model="customName" placeholder="Enter a custom name (optional)" />
+          <Label for="custom-name">Naam van je agenda item</Label>
+          <Input id="custom-name" type="text" v-model="customName" placeholder="Voer een aangepaste naam in (optioneel)" />
         </div>
         <div v-if="selectedType && selectedType !== 'custom'" class="md:col-span-2 space-y-2">
-          <Label for="event-type-color">Event Type Color</Label>
+          <Label for="event-type-color">Kleur Evenemententype</Label>
           <Input type="color" id="event-type-color" v-model="selectedTypeColor" class="w-full h-10" />
         </div>
          <div v-if="isCreatingCustomType" class="md:col-span-2 grid grid-cols-1 gap-4">
           <div class="space-y-2">
-              <Label for="custom-type-name">Custom Type Name</Label>
+              <Label for="custom-type-name">Naam Aangepast Type</Label>
               <Input type="text" id="custom-type-name" v-model="customTypeName" />
           </div>
           <div class="space-y-2">
-              <Label for="custom-type-color">Custom Type Color</Label>
+              <Label for="custom-type-color">Kleur Aangepast Type</Label>
               <Input type="color" id="custom-type-color" v-model="customTypeColor" class="w-full h-10" />
           </div>
          </div>
       </div>
     </CardContent>
     <CardFooter class="flex justify-end gap-2">
-        <Button v-if="store.selectedEvent" variant="outline" @click="store.selectedEvent = null">Cancel</Button>
-        <Button @click="saveEvent">{{ store.selectedEvent ? 'Update Event' : 'Save Event' }}</Button>
+        <Button v-if="store.selectedEvent" variant="outline" @click="store.selectedEvent = null">Annuleren</Button>
+        <Button @click="saveEvent">{{ store.selectedEvent ? 'Evenement Bijwerken' : 'Evenement Opslaan' }}</Button>
     </CardFooter>
   </Card>
 </template>

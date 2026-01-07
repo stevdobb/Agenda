@@ -28,7 +28,7 @@ interface RunningRaceData {
 const STORAGE_KEY = 'calendarEvents'
 const TYPES_STORAGE_KEY = 'calendarEventTypes'
 const HIDDEN_TYPES_STORAGE_KEY = 'hiddenEventTypes' // New: Storage key for hidden event types
-const TOTAL_LEAVE_DAYS = 32 // Fixed total leave days
+const LEAVE_DAYS_STORAGE_KEY = 'totalLeaveDays' // New: Storage key for total leave days
 
 const excludedTypesForLeave = new Set(['Wettelijke feestdag', 'Venise', 'Loopwedstrijd', 'Schoolvakantie', 'Extra op te nemen verlofdag / overuren', 'Custom event (telt niet mee als verlofdag)']);
 
@@ -48,6 +48,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const eventTypes = ref<EventType[]>([])
   const selectedEvent = ref<CalendarEvent | null>(null) // New: To store the event being edited
   const hiddenEventTypes = ref<Set<string>>(new Set()) // New: To store event types that are currently hidden
+  const totalLeaveDays = ref(32) // New: For configurable leave days
 
   const includedLeaveTypes = computed(() => {
     return eventTypes.value.filter(type => !excludedTypesForLeave.has(type.name));
@@ -57,6 +58,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const storedEvents = localStorage.getItem(STORAGE_KEY)
   const storedTypes = localStorage.getItem(TYPES_STORAGE_KEY)
   const storedHiddenTypes = localStorage.getItem(HIDDEN_TYPES_STORAGE_KEY)
+  const storedLeaveDays = localStorage.getItem(LEAVE_DAYS_STORAGE_KEY)
 
   if (storedEvents) {
     events.value = JSON.parse(storedEvents)
@@ -66,6 +68,10 @@ export const useCalendarStore = defineStore('calendar', () => {
     eventTypes.value = JSON.parse(storedTypes)
   } else {
     eventTypes.value = defaultEventTypes
+  }
+
+  if (storedLeaveDays) {
+    totalLeaveDays.value = JSON.parse(storedLeaveDays)
   }
 
   // Ensure 'halve dag verlof' is always present
@@ -171,6 +177,14 @@ export const useCalendarStore = defineStore('calendar', () => {
     hiddenEventTypes,
     (newHiddenTypes) => {
       localStorage.setItem(HIDDEN_TYPES_STORAGE_KEY, JSON.stringify(Array.from(newHiddenTypes)))
+    },
+    { deep: true }
+  )
+
+  watch(
+    totalLeaveDays,
+    (newLeaveDays) => {
+      localStorage.setItem(LEAVE_DAYS_STORAGE_KEY, JSON.stringify(newLeaveDays))
     },
     { deep: true }
   )
@@ -310,9 +324,9 @@ export const useCalendarStore = defineStore('calendar', () => {
       }
     })
 
-    const remainingDays = TOTAL_LEAVE_DAYS - plannedDays
+    const remainingDays = totalLeaveDays.value - plannedDays
     return {
-      total: TOTAL_LEAVE_DAYS,
+      total: totalLeaveDays.value,
       planned: plannedDays,
       remaining: remainingDays
     }
@@ -369,5 +383,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     updateEventTypeColor,
     getEventTypeNameForEvent,
     includedLeaveTypes,
+    totalLeaveDays,
   };
 })

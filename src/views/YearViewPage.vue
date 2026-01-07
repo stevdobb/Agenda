@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
@@ -164,8 +163,8 @@ async function scrollToEventEditor() {
   <div class="page-container max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
     <ConfirmModal 
         v-if="showConfirmModal"
-        title="Are you sure?"
-        description="This will delete all your custom events and types. This action cannot be undone."
+        title="Weet je het zeker?"
+        description="Dit zal al je evenementen en types verwijderen. Deze actie kan niet ongedaan gemaakt worden."
         @confirm="handleRestart"
         @cancel="showConfirmModal = false"
     />
@@ -189,24 +188,23 @@ async function scrollToEventEditor() {
       <div class="lg:col-span-1 flex flex-col gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Leave Days</CardTitle>
+            <CardTitle>Verlofdagen</CardTitle>
           </CardHeader>
           <CardContent>
-            <!-- Original leave day stats, can be removed or repurposed if not needed -->
             <div class="flex justify-between py-1">
-              <span>Total:</span>
+              <span>Totaal:</span>
               <span class="font-semibold">{{ store.leaveDayStats.total }}</span>
             </div>
             <div class="flex justify-between py-1">
-              <span>Planned:</span>
+              <span>Gepland:</span>
               <span class="font-semibold">{{ store.leaveDayStats.planned }}</span>
             </div>
             <div class="flex justify-between py-1">
-              <span>Remaining:</span>
+              <span>Resterend:</span>
               <span class="font-semibold">{{ store.leaveDayStats.remaining }}</span>
             </div>
             <div class="mt-4 text-xs text-gray-500 dark:text-gray-400 border-t pt-2">
-              <p class="font-semibold">Included as leave:</p>
+              <p class="font-semibold">Inbegrepen als verlof:</p>
               <ul class="list-disc pl-4">
                 <li v-for="type in store.includedLeaveTypes" :key="type.name">{{ type.name }}</li>
               </ul>
@@ -215,20 +213,20 @@ async function scrollToEventEditor() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Data Management</CardTitle>
+            <CardTitle>Gegevensbeheer</CardTitle>
           </CardHeader>
           <CardContent class="flex flex-col gap-4">
             <div class="flex flex-wrap gap-4">
-              <Button @click="triggerImport"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
-              <Button @click="exportData"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
+              <Button @click="triggerImport"><FilePlus class="mr-2 h-4 w-4" /> Importeer JSON</Button>
+              <Button @click="exportData"><FileText class="mr-2 h-4 w-4" /> Exporteer JSON</Button>
             </div>
             <div class="flex flex-wrap gap-4">
-              <Button @click="triggerIcsImport" class="bg-green-700 text-primary-foreground hover:bg-green-800"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
-              <Button @click="exportIcs" class="bg-green-700 text-primary-foreground hover:bg-green-800"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
+              <Button @click="triggerIcsImport" class="bg-green-700 text-primary-foreground hover:bg-green-800"><CalendarPlus class="mr-2 h-4 w-4" /> Importeer ICS</Button>
+              <Button @click="exportIcs" class="bg-green-700 text-primary-foreground hover:bg-green-800"><Calendar class="mr-2 h-4 w-4" /> Exporteer ICS</Button>
             </div>
             <div class="flex flex-wrap gap-4">
-              <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Restart</Button>
-              <Button @click="printView"><Printer class="mr-2 h-4 w-4" /> Print / PDF</Button>
+              <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Herstarten</Button>
+              <Button @click="printView"><Printer class="mr-2 h-4 w-4" /> Afdrukken / PDF</Button>
             </div>
             <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
             <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
