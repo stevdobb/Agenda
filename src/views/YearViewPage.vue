@@ -11,6 +11,7 @@ import SettingsModal from '@/components/SettingsModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import TopMenu from '@/components/TopMenu.vue'
+import { FilePlus, FileText, CalendarPlus, Calendar, RotateCcw, Printer } from 'lucide-vue-next'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
@@ -216,13 +217,19 @@ async function scrollToEventEditor() {
           <CardHeader>
             <CardTitle>Data Management</CardTitle>
           </CardHeader>
-          <CardContent class="flex flex-wrap gap-4">
-            <Button @click="exportData">Export JSON</Button>
-            <Button @click="exportIcs">Export ICS</Button>
-            <Button @click="triggerImport" variant="outline">Import JSON</Button>
-            <Button @click="triggerIcsImport" variant="outline">Import ICS</Button>
-            <Button @click="showConfirmModal = true" variant="destructive">Restart</Button>
-            <Button @click="printView">Print / PDF</Button>
+          <CardContent class="flex flex-col gap-4">
+            <div class="flex flex-wrap gap-4">
+              <Button @click="triggerImport"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
+              <Button @click="exportData"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
+            </div>
+            <div class="flex flex-wrap gap-4">
+              <Button @click="triggerIcsImport" class="bg-green-700 text-primary-foreground hover:bg-green-800"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
+              <Button @click="exportIcs" class="bg-green-700 text-primary-foreground hover:bg-green-800"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
+            </div>
+            <div class="flex flex-wrap gap-4">
+              <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Restart</Button>
+              <Button @click="printView"><Printer class="mr-2 h-4 w-4" /> Print / PDF</Button>
+            </div>
             <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
             <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
           </CardContent>
