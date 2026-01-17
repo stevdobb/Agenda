@@ -149,7 +149,7 @@ function handleRestart() {
 
 function handleViewSwitch(view: string) {
   if (view !== 'year') {
-    router.push('/')
+    router.push('/agenda')
   }
 }
 

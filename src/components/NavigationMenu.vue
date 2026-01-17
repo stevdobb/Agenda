@@ -20,11 +20,8 @@ const showSettingsModal = ref(false)
 const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null)
 
-// State for HomeView specific elements that might be moved here
-const currentView = ref<'list' | 'week' | 'month'>('list') // Should probably be managed by HomeView
-
 // Props/Emits for actions
-const emit = defineEmits(['viewChanged', 'refreshEvents', 'showSettings'])
+const emit = defineEmits(['refreshEvents', 'showSettings'])
 
 function navigateAndClose(route: string) {
   router.push(route)
@@ -155,16 +152,9 @@ function toggleSettingsModal() {
         </button>
       </div>
       <div class="hidden lg:flex lg:gap-x-12 items-center">
-        <router-link to="/" class="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Home</router-link>
-        <router-link to="/year" class="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Year View</router-link>
+        <router-link to="/" class="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Jaaroverzicht</router-link>
+        <router-link to="/agenda" class="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Agenda</router-link>
         
-        <!-- View Switcher (Desktop) -->
-        <div class="flex space-x-2">
-          <Button size="sm" :variant="currentView === 'list' ? 'default' : 'outline'" @click="emit('viewChanged', 'list')">List</Button>
-          <Button size="sm" :variant="currentView === 'week' ? 'default' : 'outline'" @click="emit('viewChanged', 'week')">Week</Button>
-          <Button size="sm" :variant="currentView === 'month' ? 'default' : 'outline'" @click="emit('viewChanged', 'month')">Month</Button>
-        </div>
-
         <!-- Action Buttons (Desktop) -->
         <div class="flex space-x-2 items-center">
           <Button size="sm" variant="outline" @click="manualFetchEvents">Refresh</Button>
@@ -201,17 +191,9 @@ function toggleSettingsModal() {
           <div class="mt-6 flow-root">
             <div class="-my-6 divide-y divide-gray-500/10">
               <div class="space-y-2 py-6">
-                <router-link to="/" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800" @click="navigateAndClose('/')">Home</router-link>
-                <router-link to="/year" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800" @click="navigateAndClose('/year')">Year View</router-link>
+                <router-link to="/" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800" @click="navigateAndClose('/')">Jaaroverzicht</router-link>
+                <router-link to="/agenda" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800" @click="navigateAndClose('/agenda')">Agenda</router-link>
                 
-                <!-- View Switcher (Mobile) -->
-                <div class="flex flex-col space-y-2 px-3 py-2">
-                  <span class="text-sm font-semibold leading-6 text-gray-500 dark:text-gray-400">Views</span>
-                  <Button size="sm" :variant="currentView === 'list' ? 'default' : 'outline'" @click="emit('viewChanged', 'list'); mobileMenuOpen = false">List</Button>
-                  <Button size="sm" :variant="currentView === 'week' ? 'default' : 'outline'" @click="emit('viewChanged', 'week'); mobileMenuOpen = false">Week</Button>
-                  <Button size="sm" :variant="currentView === 'month' ? 'default' : 'outline'" @click="emit('viewChanged', 'month'); mobileMenuOpen = false">Month</Button>
-                </div>
-
                 <!-- Action Buttons (Mobile) -->
                 <div class="flex flex-col space-y-2 px-3 py-2">
                   <span class="text-sm font-semibold leading-6 text-gray-500 dark:text-gray-400">Actions</span>
