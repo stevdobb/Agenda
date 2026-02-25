@@ -61,9 +61,13 @@ const viewItems = [
 
 <style scoped>
 .top-navbar {
-  background: transparent;
-  box-shadow: none;
-  border: 0;
+  background:
+    radial-gradient(circle at 12% 25%, hsl(var(--primary) / 0.22), transparent 38%),
+    linear-gradient(160deg, hsl(214 72% 31% / 0.92) 0%, hsl(216 66% 27% / 0.9) 100%);
+  box-shadow: 0 8px 24px hsl(218 65% 14% / 0.28);
+  border-bottom: 1px solid hsl(var(--border) / 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .top-navbar-logo {
