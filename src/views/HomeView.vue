@@ -412,20 +412,21 @@ function handleViewSwitch(view: string) {
 </script>
 
 <template>
-  <div class="year-weather-theme page-container mx-auto max-w-7xl p-4 pt-28 sm:p-6 sm:pt-32 lg:p-8 lg:pt-32">
-    <TopMenu 
-      :currentView="currentView" 
-      :showSettings="true" 
-      :showRefresh="true" 
-      @update:view="handleViewSwitch" 
-      @refresh="manualFetchEvents" 
-      @openSettings="showSettingsModal = true" 
-    />
+  <div class="year-weather-theme">
+    <div class="page-container mx-auto max-w-7xl px-4 pt-28 pb-4 sm:px-6 sm:pt-32 sm:pb-6 lg:px-8 lg:pt-32 lg:pb-8">
+      <TopMenu 
+        :currentView="currentView" 
+        :showSettings="true" 
+        :showRefresh="true" 
+        @update:view="handleViewSwitch" 
+        @refresh="manualFetchEvents" 
+        @openSettings="showSettingsModal = true" 
+      />
 
-    <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
+      <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
 
 
-      <div v-if="authStore.isLoggedIn" class="mt-6 border-t border-border/70 pt-6">
+        <div v-if="authStore.isLoggedIn" class="mt-6 border-t border-border/70 pt-6">
         <!-- Todo List Section -->
         <div v-if="todoStore.todos.length > 0" class="mb-8">
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
@@ -524,7 +525,7 @@ function handleViewSwitch(view: string) {
           <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" @dayClicked="handleMonthDayClick" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
         </div>
       </div>
-      <div v-else class="py-12 text-center">
+        <div v-else class="py-12 text-center">
         <!-- <h2 class="text-xl font-semibold mb-4 dark:text-white">Welcome to Natural Agenda</h2> -->
         <p class="mb-6 text-muted-foreground">
           Please log in with your Google account to connect your calendar and see your events.
@@ -535,12 +536,13 @@ function handleViewSwitch(view: string) {
         >
           Login with Google
         </button>
+        </div>
       </div>
-    </div>
-    <InstallButton />
+      <InstallButton />
 
-    <!-- Settings Modal -->
-    <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+      <!-- Settings Modal -->
+      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+    </div>
   </div>
 </template>
 

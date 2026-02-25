@@ -160,90 +160,92 @@ async function scrollToEventEditor() {
 </script>
 
 <template>
-  <div class="year-weather-theme page-container mx-auto max-w-7xl p-4 pt-28 sm:p-6 sm:pt-32 lg:p-8 lg:pt-32">
-    <ConfirmModal 
-        v-if="showConfirmModal"
-        title="Weet je het zeker?"
-        description="Dit zal al je evenementen en types verwijderen. Deze actie kan niet ongedaan gemaakt worden."
-        @confirm="handleRestart"
-        @cancel="showConfirmModal = false"
-    />
-    <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+  <div class="year-weather-theme">
+    <div class="page-container mx-auto max-w-7xl px-4 pt-28 pb-4 sm:px-6 sm:pt-32 sm:pb-6 lg:px-8 lg:pt-32 lg:pb-8">
+      <ConfirmModal 
+          v-if="showConfirmModal"
+          title="Weet je het zeker?"
+          description="Dit zal al je evenementen en types verwijderen. Deze actie kan niet ongedaan gemaakt worden."
+          @confirm="handleRestart"
+          @cancel="showConfirmModal = false"
+      />
+      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
 
-    <TopMenu 
-      currentView="year" 
-      :showSettings="true" 
-      :showRefresh="false" 
-      @update:view="handleViewSwitch" 
-      @openSettings="showSettingsModal = true"
-    />
+      <TopMenu 
+        currentView="year" 
+        :showSettings="true" 
+        :showRefresh="false" 
+        @update:view="handleViewSwitch" 
+        @openSettings="showSettingsModal = true"
+      />
 
-    <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-      <div class="lg:col-span-2 flex flex-col gap-8">
-        <div ref="eventEditorRef">
-          <EventEditor />
+      <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div class="lg:col-span-2 flex flex-col gap-8">
+          <div ref="eventEditorRef">
+            <EventEditor />
+          </div>
+          <PrintLegend />
         </div>
-        <PrintLegend />
+        <div class="lg:col-span-1 flex flex-col gap-8">
+          <Card class="year-side-card">
+            <CardHeader>
+              <CardTitle>Verlofdagen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div class="flex justify-between py-1">
+                <span>Totaal:</span>
+                <span class="font-semibold">{{ store.leaveDayStats.total }}</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span>Gepland:</span>
+                <span class="font-semibold">{{ store.leaveDayStats.planned }}</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span>Resterend:</span>
+                <span class="font-semibold">{{ store.leaveDayStats.remaining }}</span>
+              </div>
+              <div class="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                <p class="font-semibold">Inbegrepen als verlof:</p>
+                <ul class="list-disc pl-4">
+                  <li v-for="type in store.includedLeaveTypes" :key="type.name">{{ type.name }}</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+          <Card class="year-side-card">
+            <CardHeader>
+              <CardTitle>Gegevensbeheer</CardTitle>
+            </CardHeader>
+            <CardContent class="flex flex-col gap-4">
+              <div class="flex flex-wrap gap-4">
+                <Button @click="triggerImport" variant="secondary" class="year-action-button"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
+                <Button @click="exportData" variant="outline" class="year-action-button"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
+              </div>
+              <div class="flex flex-wrap gap-4">
+                <Button @click="triggerIcsImport" class="year-action-button"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
+                <Button @click="exportIcs" variant="outline" class="year-action-button"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
+              </div>
+              <div class="flex flex-wrap gap-4">
+                <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Herstarten</Button>
+                <Button @click="printView" variant="secondary" class="year-action-button"><Printer class="mr-2 h-4 w-4" /> Afdrukken / PDF</Button>
+              </div>
+              <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
+              <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      <div class="lg:col-span-1 flex flex-col gap-8">
-        <Card class="year-side-card">
-          <CardHeader>
-            <CardTitle>Verlofdagen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div class="flex justify-between py-1">
-              <span>Totaal:</span>
-              <span class="font-semibold">{{ store.leaveDayStats.total }}</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span>Gepland:</span>
-              <span class="font-semibold">{{ store.leaveDayStats.planned }}</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span>Resterend:</span>
-              <span class="font-semibold">{{ store.leaveDayStats.remaining }}</span>
-            </div>
-            <div class="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-              <p class="font-semibold">Inbegrepen als verlof:</p>
-              <ul class="list-disc pl-4">
-                <li v-for="type in store.includedLeaveTypes" :key="type.name">{{ type.name }}</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-        <Card class="year-side-card">
-          <CardHeader>
-            <CardTitle>Gegevensbeheer</CardTitle>
-          </CardHeader>
-          <CardContent class="flex flex-col gap-4">
-            <div class="flex flex-wrap gap-4">
-              <Button @click="triggerImport" variant="secondary" class="year-action-button"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
-              <Button @click="exportData" variant="outline" class="year-action-button"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
-            </div>
-            <div class="flex flex-wrap gap-4">
-              <Button @click="triggerIcsImport" class="year-action-button"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
-              <Button @click="exportIcs" variant="outline" class="year-action-button"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
-            </div>
-            <div class="flex flex-wrap gap-4">
-              <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Herstarten</Button>
-              <Button @click="printView" variant="secondary" class="year-action-button"><Printer class="mr-2 h-4 w-4" /> Afdrukken / PDF</Button>
-            </div>
-            <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
-            <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
-          </CardContent>
-        </Card>
+      <div class="printable-area">
+        <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ new Date().getFullYear() }}</h2>
+        <YearView />
+        <div class="mt-8 print-only print-legend-container">
+          <PrintLegend />
+        </div>
       </div>
-    </div>
-    <div class="printable-area">
-      <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ new Date().getFullYear() }}</h2>
-      <YearView />
-      <div class="mt-8 print-only print-legend-container">
-        <PrintLegend />
+      <!-- New position for EventList -->
+      <div class="mt-8 no-print">
+        <EventList @editEvent="scrollToEventEditor" />
       </div>
-    </div>
-    <!-- New position for EventList -->
-    <div class="mt-8 no-print">
-      <EventList @editEvent="scrollToEventEditor" />
     </div>
   </div>
 </template>
@@ -270,12 +272,6 @@ async function scrollToEventEditor() {
   --border: 213 63% 55%;
   --input: 214 56% 47%;
   --ring: 202 94% 82%;
-  border: 1px solid hsl(var(--border) / 0.5);
-  border-radius: 1.125rem;
-  background:
-    radial-gradient(circle at 88% 10%, hsl(200 100% 82% / 0.24), transparent 35%),
-    linear-gradient(165deg, hsl(213 70% 38%) 0%, hsl(214 67% 35%) 42%, hsl(216 64% 30%) 100%);
-  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.2), 0 24px 50px hsl(218 68% 14% / 0.34);
 }
 
 .year-weather-theme .year-side-card {
