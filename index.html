@@ -17,8 +17,22 @@
     <meta name="twitter:description" content="Quickly add events to your Google Calendar using natural language.">
     <meta name="twitter:image" content="/pwa-512x512.png">
     <title>Natural Agenda</title>
-    <script type="module" crossorigin src="/Agenda/assets/index-CmPcn6nq.js"></script>
-    <link rel="stylesheet" crossorigin href="/Agenda/assets/index-CDXl9k5U.css">
+    <script>
+      // GitHub Pages SPA fallback: restore the original path after 404.html redirect.
+      ;(function (location) {
+        if (location.search[1] !== '/') return
+        const decoded = location.search
+          .slice(1)
+          .split('&')
+          .map(function (part) {
+            return part.replace(/~and~/g, '&')
+          })
+          .join('?')
+        window.history.replaceState(null, '', decoded + location.hash)
+      })(window.location)
+    </script>
+    <script type="module" crossorigin src="/Agenda/assets/index-DZkRXX3L.js"></script>
+    <link rel="stylesheet" crossorigin href="/Agenda/assets/index-DqU2ggfs.css">
   <link rel="manifest" href="/Agenda/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/Agenda/registerSW.js"></script></head>
   <body>
     <div id="app"></div>
