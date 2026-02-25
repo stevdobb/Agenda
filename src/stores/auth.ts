@@ -134,8 +134,7 @@ function checkDarkMode() {
         // Check if token is expired for this account
         if (account.expiresAt <= Date.now() + 5 * 1000) { // 5 seconds buffer
           console.warn(`AuthStore: Access token for account ${account.user.email} is expired. Skipping event fetch.`);
-          account.events = []; // Clear events for expired token
-          // In a real app, you would attempt to refresh the token here.
+          // Keep existing events until token is refreshed to avoid abrupt empty state.
           continue;
         }
 
@@ -248,18 +247,19 @@ function checkDarkMode() {
       const initialCount = parsedAccounts.length;
       const stillValidAccounts = parsedAccounts.filter(account => account.user && typeof account.user.error === 'undefined');
       const expiredAccounts = stillValidAccounts.filter(account => account.expiresAt <= Date.now() + 5000);
-      const activeAndValidAccounts = stillValidAccounts.filter(account => account.expiresAt > Date.now() + 5000);
 
       if (stillValidAccounts.length < initialCount) {
         console.warn('AuthStore: Removed invalid accounts from storage.');
         localStorage.setItem('google_accounts', JSON.stringify(stillValidAccounts));
       }
 
-      accounts.value = activeAndValidAccounts;
+      accounts.value = stillValidAccounts.map((account) => ({
+        ...account,
+        events: Array.isArray(account.events) ? account.events : [],
+      }));
 
       if (expiredAccounts.length > 0) {
-        console.log(`AuthStore: ${expiredAccounts.length} account(s) have expired tokens. User will need to manually re-authenticate.`);
-        // requestAccessToken(); // Removed automatic token refresh to prevent popup on load
+        console.log(`AuthStore: ${expiredAccounts.length} account(s) have expired tokens. A silent refresh can renew them when needed.`);
       }
       
       if (savedActiveAccountId && accounts.value.some(acc => acc.id === savedActiveAccountId)) {

@@ -7,7 +7,7 @@ const store = useCalendarStore()
 </script>
 
 <template>
-  <Card class="w-full">
+  <Card class="legend-card w-full">
     <!-- <CardHeader>
       <CardTitle>Legenda</CardTitle>
     </CardHeader> -->
@@ -21,3 +21,19 @@ const store = useCalendarStore()
     </CardContent>
   </Card>
 </template>
+
+<style scoped>
+.legend-card {
+  border-color: hsl(var(--border) / 0.65);
+  background-color: hsl(var(--card) / 0.9);
+  box-shadow: 0 14px 28px hsl(218 56% 20% / 0.2), inset 0 1px 0 hsl(0 0% 100% / 0.14);
+}
+
+@media print {
+  .legend-card {
+    border-color: hsl(20 5.9% 90%);
+    background: #fff;
+    box-shadow: none;
+  }
+}
+</style>

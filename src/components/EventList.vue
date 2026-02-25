@@ -65,7 +65,7 @@ function formatEventDates(event: CalendarEvent): string {
 </script>
 
 <template>
-  <Card>
+  <Card class="event-list-card">
     <CardHeader>
       <CardTitle>Alle Evenementen</CardTitle>
     </CardHeader>
@@ -78,8 +78,8 @@ function formatEventDates(event: CalendarEvent): string {
           <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
             {{ group.label }}
           </p>
-          <ul class="divide-y">
-            <li v-for="event in group.events" :key="event.id" class="flex items-center justify-between gap-3 py-2">
+          <ul class="space-y-2">
+            <li v-for="event in group.events" :key="event.id" class="event-row flex items-center justify-between gap-3 rounded-md border px-3 py-2">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: event.color }"></span>
                 <span class="text-xs text-muted-foreground tabular-nums shrink-0">
@@ -102,3 +102,29 @@ function formatEventDates(event: CalendarEvent): string {
     </CardContent>
   </Card>
 </template>
+
+<style scoped>
+.event-list-card {
+  border-color: hsl(var(--border) / 0.65);
+  background-color: hsl(var(--card) / 0.9);
+  box-shadow: 0 14px 28px hsl(218 56% 20% / 0.2), inset 0 1px 0 hsl(0 0% 100% / 0.14);
+}
+
+.event-row {
+  border-color: hsl(var(--border) / 0.55);
+  background-color: hsl(var(--background) / 0.24);
+}
+
+@media print {
+  .event-list-card {
+    border-color: hsl(20 5.9% 90%);
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .event-row {
+    border-color: hsl(20 5.9% 90%);
+    background: #fff;
+  }
+}
+</style>

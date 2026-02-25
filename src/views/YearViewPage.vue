@@ -160,7 +160,7 @@ async function scrollToEventEditor() {
 </script>
 
 <template>
-  <div class="page-container max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+  <div class="year-weather-theme page-container max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
     <ConfirmModal 
         v-if="showConfirmModal"
         title="Weet je het zeker?"
@@ -186,7 +186,7 @@ async function scrollToEventEditor() {
         <PrintLegend />
       </div>
       <div class="lg:col-span-1 flex flex-col gap-8">
-        <Card>
+        <Card class="year-side-card">
           <CardHeader>
             <CardTitle>Verlofdagen</CardTitle>
           </CardHeader>
@@ -203,7 +203,7 @@ async function scrollToEventEditor() {
               <span>Resterend:</span>
               <span class="font-semibold">{{ store.leaveDayStats.remaining }}</span>
             </div>
-            <div class="mt-4 text-xs text-gray-500 dark:text-gray-400 border-t pt-2">
+            <div class="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
               <p class="font-semibold">Inbegrepen als verlof:</p>
               <ul class="list-disc pl-4">
                 <li v-for="type in store.includedLeaveTypes" :key="type.name">{{ type.name }}</li>
@@ -211,22 +211,22 @@ async function scrollToEventEditor() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card class="year-side-card">
           <CardHeader>
             <CardTitle>Gegevensbeheer</CardTitle>
           </CardHeader>
           <CardContent class="flex flex-col gap-4">
             <div class="flex flex-wrap gap-4">
-              <Button @click="triggerImport"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
-              <Button @click="exportData"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
+              <Button @click="triggerImport" variant="secondary" class="year-action-button"><FilePlus class="mr-2 h-4 w-4" /> Import JSON</Button>
+              <Button @click="exportData" variant="outline" class="year-action-button"><FileText class="mr-2 h-4 w-4" /> Export JSON</Button>
             </div>
             <div class="flex flex-wrap gap-4">
-              <Button @click="triggerIcsImport" class="bg-green-700 text-primary-foreground hover:bg-green-800"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
-              <Button @click="exportIcs" class="bg-green-700 text-primary-foreground hover:bg-green-800"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
+              <Button @click="triggerIcsImport" class="year-action-button"><CalendarPlus class="mr-2 h-4 w-4" /> Import ICS</Button>
+              <Button @click="exportIcs" variant="outline" class="year-action-button"><Calendar class="mr-2 h-4 w-4" /> Export ICS</Button>
             </div>
             <div class="flex flex-wrap gap-4">
               <Button @click="showConfirmModal = true" variant="destructive"><RotateCcw class="mr-2 h-4 w-4" /> Herstarten</Button>
-              <Button @click="printView"><Printer class="mr-2 h-4 w-4" /> Afdrukken / PDF</Button>
+              <Button @click="printView" variant="secondary" class="year-action-button"><Printer class="mr-2 h-4 w-4" /> Afdrukken / PDF</Button>
             </div>
             <input type="file" ref="importFile" @change="importData" class="hidden" accept=".json">
             <input type="file" ref="importIcsFile" @change="importIcsData" class="hidden" accept=".ics">
@@ -250,11 +250,104 @@ async function scrollToEventEditor() {
 
 
 <style>
+.year-weather-theme {
+  --background: 214 71% 34%;
+  --foreground: 210 40% 96%;
+  --card: 214 66% 38%;
+  --card-foreground: 210 40% 97%;
+  --popover: 214 67% 34%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 202 94% 82%;
+  --primary-foreground: 214 72% 24%;
+  --secondary: 214 62% 31%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 214 52% 43%;
+  --muted-foreground: 211 52% 84%;
+  --accent: 214 57% 45%;
+  --accent-foreground: 210 40% 96%;
+  --destructive: 353 80% 64%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 213 63% 55%;
+  --input: 214 56% 47%;
+  --ring: 202 94% 82%;
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 1.125rem;
+  background:
+    radial-gradient(circle at 88% 10%, hsl(200 100% 82% / 0.24), transparent 35%),
+    linear-gradient(165deg, hsl(213 70% 38%) 0%, hsl(214 67% 35%) 42%, hsl(216 64% 30%) 100%);
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.2), 0 24px 50px hsl(218 68% 14% / 0.34);
+}
+
+.year-weather-theme .year-side-card {
+  background-color: hsl(var(--card) / 0.9);
+  border-color: hsl(var(--border) / 0.6);
+  box-shadow: 0 14px 30px hsl(218 72% 20% / 0.22), inset 0 1px 0 hsl(0 0% 100% / 0.18);
+}
+
+.year-weather-theme .year-action-button {
+  border-color: hsl(var(--border) / 0.66);
+}
+
+.year-weather-theme .litepicker .container__months {
+  border: 1px solid hsl(var(--border) / 0.75);
+  border-radius: 0.7rem;
+  background: hsl(var(--card));
+  box-shadow: 0 18px 35px hsl(218 64% 14% / 0.35);
+}
+
+.year-weather-theme .litepicker .month-item-header,
+.year-weather-theme .litepicker .month-item-weekdays-row > div {
+  color: hsl(var(--muted-foreground));
+}
+
+.year-weather-theme .litepicker .day-item {
+  color: hsl(var(--card-foreground));
+}
+
+.year-weather-theme .litepicker .day-item:hover {
+  background: hsl(var(--accent) / 0.5);
+}
+
+.year-weather-theme .litepicker .day-item.is-start-date,
+.year-weather-theme .litepicker .day-item.is-end-date {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.year-weather-theme .litepicker .day-item.is-in-range {
+  background: hsl(var(--secondary));
+}
+
 .print-only {
   display: none;
 }
 
 @media print {
+  .year-weather-theme {
+    background: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+    --background: 0 0% 100%;
+    --foreground: 20 14.3% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14.3% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14.3% 4.1%;
+    --primary: 24 9.8% 10%;
+    --primary-foreground: 60 9.1% 97.8%;
+    --secondary: 60 4.8% 95.9%;
+    --secondary-foreground: 24 9.8% 10%;
+    --muted: 60 4.8% 95.9%;
+    --muted-foreground: 25 5.3% 44.7%;
+    --accent: 60 4.8% 95.9%;
+    --accent-foreground: 24 9.8% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    --border: 20 5.9% 90%;
+    --input: 20 5.9% 90%;
+    --ring: 20 14.3% 4.1%;
+  }
+
   .print-only {
     display: block !important;
   }

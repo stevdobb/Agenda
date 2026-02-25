@@ -2,8 +2,29 @@ import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 
 const GOOGLE_CLIENT_ID = '350064938484-i5mqo80eieq2e966i10kus824r4p7pmc.apps.googleusercontent.com';
+const TOKEN_REQUEST_TIMEOUT_MS = 20000;
 
 let tokenClient: google.accounts.oauth2.TokenClient | undefined;
+let pendingTokenRequest:
+  | {
+      resolve: (value: google.accounts.oauth2.TokenResponse) => void;
+      reject: (reason?: unknown) => void;
+      timeoutId: ReturnType<typeof setTimeout>;
+    }
+  | null = null;
+
+export interface RequestAccessTokenOptions {
+  prompt?: string;
+  hint?: string;
+}
+
+function clearPendingTokenRequest() {
+  if (!pendingTokenRequest) {
+    return;
+  }
+  clearTimeout(pendingTokenRequest.timeoutId);
+  pendingTokenRequest = null;
+}
 
 // This function handles the response from Google after a token is received
 const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) => {
@@ -33,11 +54,25 @@ const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) 
       authStore.setToken(tokenResponse.access_token, Number(tokenResponse.expires_in), userinfo.sub, userinfo)
       // Fetch upcoming events after login (for all accounts)
       await authStore.fetchUpcomingEvents();
+      if (pendingTokenRequest) {
+        pendingTokenRequest.resolve(tokenResponse);
+      }
     } catch (error: any) {
       console.error("Login failed:", error);
       uiStore.showAlert('Login Failed', error.message);
+      if (pendingTokenRequest) {
+        pendingTokenRequest.reject(error);
+      }
+    } finally {
+      clearPendingTokenRequest();
     }
+    return;
   }
+
+  if (pendingTokenRequest) {
+    pendingTokenRequest.reject(new Error('Token response did not contain an access token.'));
+  }
+  clearPendingTokenRequest();
 };
 
 // Initializes the Google Identity Services client
@@ -61,19 +96,60 @@ export function initializeGsi(): Promise<void> {
 }
 
 // Prompts the user for a new access token
-export function requestAccessToken(options?: { prompt: string }) {
+export function requestAccessToken(options?: RequestAccessTokenOptions): Promise<google.accounts.oauth2.TokenResponse> {
   const uiStore = useUiStore();
-  if (tokenClient) {
-    if (options?.prompt) {
-      tokenClient.requestAccessToken({ prompt: options.prompt });
-    } else {
-      tokenClient.requestAccessToken();
+  return new Promise((resolve, reject) => {
+    if (pendingTokenRequest) {
+      reject(new Error('A token request is already in progress.'));
+      return;
     }
-  } else {
-    console.error("GSI client not initialized.");
-    // Optionally, try to initialize it now
-    initializeGsi().then(() => {
-      tokenClient?.requestAccessToken();
-    }).catch(error => uiStore.showAlert('Error', error.message));
-  }
+
+    const timeoutId = setTimeout(() => {
+      if (pendingTokenRequest) {
+        pendingTokenRequest.reject(new Error('Timed out while requesting a Google access token.'));
+      }
+      clearPendingTokenRequest();
+    }, TOKEN_REQUEST_TIMEOUT_MS);
+
+    pendingTokenRequest = {
+      resolve,
+      reject,
+      timeoutId,
+    };
+
+    const requestToken = () => {
+      if (!tokenClient) {
+        if (pendingTokenRequest) {
+          pendingTokenRequest.reject(new Error('GSI client not initialized.'));
+        }
+        clearPendingTokenRequest();
+        return;
+      }
+
+      const requestOptions: google.accounts.oauth2.OverridableTokenClientConfig = {};
+      if (typeof options?.prompt === 'string') {
+        requestOptions.prompt = options.prompt;
+      }
+      if (options?.hint) {
+        requestOptions.hint = options.hint;
+      }
+
+      tokenClient.requestAccessToken(requestOptions);
+    };
+
+    if (tokenClient) {
+      requestToken();
+      return;
+    }
+
+    initializeGsi()
+      .then(requestToken)
+      .catch((error: any) => {
+        uiStore.showAlert('Error', error.message);
+        if (pendingTokenRequest) {
+          pendingTokenRequest.reject(error);
+        }
+        clearPendingTokenRequest();
+      });
+  });
 }

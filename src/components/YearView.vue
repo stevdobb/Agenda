@@ -86,7 +86,7 @@ function isSchoolHolidayDay(monthIndex: number, day: number) {
 }
 
 function getDayWrapperClass(monthIndex: number, day: number) {
-  return isSchoolHolidayDay(monthIndex, day) ? 'bg-gray-200 dark:bg-gray-700' : ''
+  return isSchoolHolidayDay(monthIndex, day) ? 'school-holiday-day' : ''
 }
 
 function getEventForDay(monthIndex: number, day: number): CalendarEvent | undefined {
@@ -118,7 +118,7 @@ function getDayStyle(monthIndex: number, day: number) {
     }
     return {
       backgroundColor: event.color,
-      color: '#ffffff',
+      color: '#f8fcff',
       fontWeight: 'bold'
     }
   }
@@ -130,7 +130,7 @@ function getDayBorderClass(monthIndex: number, day: number) {
   if (event) {
     const resolvedType = store.getEventTypeNameForEvent(event) ?? event.type;
     if (resolvedType === 'halve dag verlof') {
-      return 'border-r-2 border-t-2 border-black';
+      return 'half-day-marker';
     }
   }
   return '';
@@ -138,25 +138,25 @@ function getDayBorderClass(monthIndex: number, day: number) {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    <div v-for="month in months" :key="month" class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm flex flex-col">
-      <h3 class="font-bold text-lg text-center mb-3 dark:text-white capitalize">{{ getMonthName(month) }}</h3>
+  <div class="year-grid grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div v-for="month in months" :key="month" class="year-month-card flex flex-col rounded-lg border p-4">
+      <h3 class="month-title mb-3 text-center text-lg font-bold capitalize">{{ getMonthName(month) }}</h3>
       
-      <div v-if="monthlyStats[month] > 0" class="text-xs text-center mb-2 text-gray-500 dark:text-gray-400">
+      <div v-if="monthlyStats[month] > 0" class="month-meta mb-2 text-center text-xs">
         <span>Gebruikt: {{ monthlyStats[month] }}</span>
       </div>
       
       <!-- Calendar Grid -->
-      <div class="grid grid-cols-7 gap-1 text-center text-xs mb-4 text-gray-600 dark:text-gray-400">
-        <div v-for="day in ['M','D','W','D','V','Z','Z']" :key="day" class="font-bold">{{ day }}</div>
+      <div class="month-grid mb-4 grid grid-cols-7 gap-1 text-center text-xs">
+        <div v-for="day in ['M','D','W','D','V','Z','Z']" :key="day" class="weekday-label font-bold">{{ day }}</div>
         <div v-for="blank in getFirstDayOfMonth(month)" :key="`blank-${blank}`"></div>
         <div 
           v-for="day in getDaysInMonth(month)" 
           :key="day" 
-          :class="['p-1', getDayWrapperClass(month, day), getDayBorderClass(month, day)]"
+          :class="['month-day-cell p-1', getDayWrapperClass(month, day), getDayBorderClass(month, day)]"
         >
             <div 
-                class="w-6 h-6 flex items-center justify-center mx-auto rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                class="month-day-badge mx-auto flex h-6 w-6 items-center justify-center rounded-full transition"
                 :style="getDayStyle(month, day)"
             >
                 {{ day }}
@@ -165,12 +165,99 @@ function getDayBorderClass(monthIndex: number, day: number) {
       </div>
 
       <!-- Events List -->
-      <div class="space-y-2 border-t dark:border-gray-700 pt-2 mt-auto">
-        <div v-for="event in getEventsForMonth(month)" :key="event.id" class="text-xs flex items-start space-x-2">
-            <span class="font-bold text-blue-600 dark:text-blue-400 shrink-0 text-right min-w-[1.25rem]">{{ getEventDateDisplay(event) }}</span>
-            <span class="truncate text-gray-800 dark:text-gray-200" :title="event.customName || event.type" :style="{ color: event.color }">{{ event.customName || event.type }}</span>
+      <div class="month-events mt-auto space-y-2 border-t pt-2">
+        <div v-for="event in getEventsForMonth(month)" :key="event.id" class="event-row flex items-start space-x-2 text-xs">
+            <span class="event-date min-w-[1.25rem] shrink-0 text-right font-bold">{{ getEventDateDisplay(event) }}</span>
+            <span class="event-text truncate" :title="event.customName || event.type" :style="{ color: event.color }">{{ event.customName || event.type }}</span>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.year-month-card {
+  border-color: hsl(var(--border) / 0.66);
+  background-color: hsl(var(--card) / 0.9);
+  color: hsl(var(--card-foreground));
+  box-shadow: 0 12px 24px hsl(218 58% 20% / 0.2), inset 0 1px 0 hsl(0 0% 100% / 0.18);
+}
+
+.month-title {
+  color: hsl(var(--card-foreground));
+}
+
+.month-meta,
+.weekday-label {
+  color: hsl(var(--muted-foreground));
+}
+
+.month-day-cell {
+  border-radius: 0.45rem;
+}
+
+.month-day-badge {
+  color: hsl(var(--card-foreground));
+}
+
+.month-day-badge:hover {
+  background-color: hsl(var(--accent) / 0.34);
+}
+
+.school-holiday-day {
+  border-radius: 0.45rem;
+  background-color: hsl(var(--secondary) / 0.55);
+}
+
+.half-day-marker {
+  border-right: 2px solid hsl(var(--card-foreground) / 0.8);
+  border-top: 2px solid hsl(var(--card-foreground) / 0.8);
+}
+
+.month-events {
+  border-color: hsl(var(--border) / 0.6);
+}
+
+.event-date {
+  color: hsl(var(--primary));
+}
+
+.event-text {
+  color: hsl(var(--card-foreground));
+}
+
+@media print {
+  .year-month-card {
+    border-color: hsl(20 5.9% 90%);
+    background-color: #fff;
+    color: hsl(20 14.3% 4.1%);
+    box-shadow: none;
+  }
+
+  .month-meta,
+  .weekday-label {
+    color: hsl(25 5.3% 44.7%);
+  }
+
+  .month-day-badge:hover {
+    background-color: transparent;
+  }
+
+  .school-holiday-day {
+    background-color: hsl(60 4.8% 95.9%);
+  }
+
+  .half-day-marker {
+    border-right-color: #000;
+    border-top-color: #000;
+  }
+
+  .month-events {
+    border-color: hsl(20 5.9% 90%);
+  }
+
+  .event-date {
+    color: hsl(24 9.8% 20%);
+  }
+}
+</style>

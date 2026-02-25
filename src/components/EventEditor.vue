@@ -154,7 +154,7 @@ function saveEvent() {
 </script>
 
 <template>
-  <Card>
+  <Card class="editor-card">
     <CardHeader>
       <CardTitle>Evenement Toevoegen/Bewerken</CardTitle>
     </CardHeader>
@@ -171,7 +171,7 @@ function saveEvent() {
         </div>
         <div class="md:col-span-2 space-y-2">
           <Label for="event-type">Type Evenement</Label>
-          <select id="event-type" v-model="selectedType" @change="isCreatingCustomType = selectedType === 'custom'" class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+          <select id="event-type" v-model="selectedType" @change="isCreatingCustomType = selectedType === 'custom'" class="editor-select flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
             <option v-for="type in store.eventTypes" :key="type.name" :value="type.name">{{ type.name }}</option>
             <option value="custom">-- Maak een Aangepast Type --</option>
           </select>
@@ -202,3 +202,23 @@ function saveEvent() {
     </CardFooter>
   </Card>
 </template>
+
+<style scoped>
+.editor-card {
+  background-color: hsl(var(--card) / 0.9);
+  border-color: hsl(var(--border) / 0.65);
+  box-shadow: 0 14px 28px hsl(218 56% 20% / 0.2), inset 0 1px 0 hsl(0 0% 100% / 0.14);
+}
+
+.editor-select {
+  color: hsl(var(--foreground));
+}
+
+@media print {
+  .editor-card {
+    background: #fff;
+    border-color: hsl(20 5.9% 90%);
+    box-shadow: none;
+  }
+}
+</style>

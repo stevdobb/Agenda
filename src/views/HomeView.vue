@@ -23,6 +23,7 @@ const showSettingsModal = ref(false) // State for settings modal
 const lastAddedEventId = ref<string | null>(null) // To highlight the last added event
 const currentView = ref<'list' | 'week' | 'month'>('list') // State for current view
 const currentDate = ref(new Date()) // State for current date (for week/month view navigation)
+const tokenRefreshBufferMs = 30 * 1000
 
 onMounted(() => {
   // Initial fetch is now handled by watch with { immediate: true }
@@ -72,6 +73,33 @@ function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
     fetchEnd = new Date(date.getFullYear(), date.getMonth() + 2, 0);
   }
   return { fetchStart, fetchEnd };
+}
+
+function getActiveAccount() {
+  return authStore.accounts.find((account) => account.id === authStore.activeAccountId)
+}
+
+async function ensureActiveAccessToken() {
+  const currentAccount = getActiveAccount()
+  if (!currentAccount) {
+    throw new Error('No active account found.')
+  }
+
+  if (currentAccount.expiresAt > Date.now() + tokenRefreshBufferMs) {
+    return currentAccount
+  }
+
+  await requestAccessToken({
+    prompt: '',
+    hint: currentAccount.user?.email,
+  })
+
+  const refreshedAccount = getActiveAccount()
+  if (!refreshedAccount || refreshedAccount.expiresAt <= Date.now() + 5000) {
+    throw new Error('Could not refresh Google session. Please log in again.')
+  }
+
+  return refreshedAccount
 }
 
 
@@ -275,7 +303,7 @@ async function createEvent() {
     }
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    const activeAccount = authStore.accounts.find(acc => acc.id === authStore.activeAccountId);
+    const activeAccount = await ensureActiveAccessToken();
     if (!activeAccount) {
         feedbackMessage.value = `❌ Error: No active account found to create event.`;
         isLoading.value = false;
@@ -313,7 +341,10 @@ async function deleteEvent(eventId: string) {
   isLoading.value = true;
   feedbackMessage.value = '';
 
-  const activeAccount = authStore.accounts.find(acc => acc.id === authStore.activeAccountId);
+  const activeAccount = await ensureActiveAccessToken().catch((error: any) => {
+    feedbackMessage.value = `❌ Error: ${error.message}`;
+    return null;
+  });
   if (!activeAccount) {
       feedbackMessage.value = `❌ Error: No active account found to delete event.`;
       isLoading.value = false;
@@ -338,11 +369,20 @@ function handleMonthDayClick(date: Date) {
   currentView.value = 'list';
 }
 
-function manualFetchEvents() {
+async function manualFetchEvents() {
   if (!authStore.isLoggedIn) {
     feedbackMessage.value = '❌ Please log in to refresh events.';
     return;
   }
+
+  const activeAccount = await ensureActiveAccessToken().catch((error: any) => {
+    feedbackMessage.value = `❌ Error: ${error.message}`;
+    return null;
+  });
+  if (!activeAccount) {
+    return;
+  }
+
   const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value);
   authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
   feedbackMessage.value = '✅ Events refreshed.';
@@ -363,7 +403,9 @@ function isEventToday(event: any): boolean {
 }
 
 function handleLogin() {
-  requestAccessToken();
+  requestAccessToken().catch((error: any) => {
+    feedbackMessage.value = `❌ Error: ${error.message}`;
+  });
 }
 
 function handleViewSwitch(view: string) {
