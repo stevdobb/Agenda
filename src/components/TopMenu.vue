@@ -20,10 +20,10 @@ const viewItems = [
 </script>
 
 <template>
-  <nav class="no-print my-6">
-    <Card class="top-navbar border border-border/70">
+  <nav class="no-print fixed inset-x-0 top-0 z-50">
+    <Card class="top-navbar w-full rounded-none border-0 shadow-none">
       <CardContent class="p-2 sm:p-3">
-        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div class="mx-auto flex w-full max-w-7xl flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div class="flex items-center gap-2 px-2 py-1 text-card-foreground">
             <span class="top-navbar-logo inline-flex h-8 w-8 items-center justify-center rounded-md">
               <CalendarCheck2 class="h-4 w-4" />
@@ -61,8 +61,9 @@ const viewItems = [
 
 <style scoped>
 .top-navbar {
-  background-color: hsl(var(--card) / 0.92);
-  box-shadow: 0 12px 28px hsl(218 58% 18% / 0.24), inset 0 1px 0 hsl(0 0% 100% / 0.14);
+  background: transparent;
+  box-shadow: none;
+  border: 0;
 }
 
 .top-navbar-logo {

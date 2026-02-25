@@ -160,7 +160,7 @@ async function scrollToEventEditor() {
 </script>
 
 <template>
-  <div class="year-weather-theme page-container max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+  <div class="year-weather-theme page-container mx-auto max-w-7xl p-4 pt-28 sm:p-6 sm:pt-32 lg:p-8 lg:pt-32">
     <ConfirmModal 
         v-if="showConfirmModal"
         title="Weet je het zeker?"

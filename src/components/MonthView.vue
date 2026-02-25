@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineProps, computed } from 'vue'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
+import { Button } from '@/components/ui/button'
 
 const props = defineProps<{
   currentDate: Date,
@@ -105,44 +106,42 @@ function isToday(date: Date | null) {
 </script>
 
 <template>
-  <div class="mt-8 border-t dark:border-gray-700 pt-6">
+  <div class="month-view mt-8 border-t border-border/70 pt-6">
     <!-- Month Navigation -->
-    <div class="flex items-center justify-between mb-4">
-      <button @click="navigateMonth('prev')" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+    <div class="mb-4 flex items-center justify-between">
+      <Button @click="navigateMonth('prev')" variant="secondary" size="icon" class="border border-border/70">
         <ChevronLeftIcon class="h-5 w-5" />
-      </button>
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ currentMonthYear }}</h3>
-      <button @click="navigateMonth('next')" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+      </Button>
+      <h3 class="text-lg font-semibold text-card-foreground">{{ currentMonthYear }}</h3>
+      <Button @click="navigateMonth('next')" variant="secondary" size="icon" class="border border-border/70">
         <ChevronRightIcon class="h-5 w-5" />
-      </button>
+      </Button>
     </div>
-    <div class="flex justify-center mb-4">
-      <button @click="goToToday" class="px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition">Today</button>
+    <div class="mb-4 flex justify-center">
+      <Button @click="goToToday" class="month-today-button">Today</Button>
     </div>
 
     <!-- Calendar Grid -->
     <div class="grid grid-cols-7 gap-1">
-      <div v-for="dayName in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="dayName" class="text-center font-bold text-sm text-gray-600 dark:text-gray-300 pb-2">
+      <div v-for="dayName in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="dayName" class="pb-2 text-center text-sm font-bold text-muted-foreground">
         {{ dayName }}
       </div>
       <div
         v-for="(day, index) in calendarDays"
         :key="index"
         :class="[
-          'relative h-32 p-1 rounded-md overflow-hidden',
-          day ? 'bg-gray-50 dark:bg-gray-700 cursor-pointer' : 'bg-gray-200 dark:bg-gray-800',
-          isToday(day) ? 'border-2 border-blue-500' : 'border border-gray-200 dark:border-gray-600'
+          'day-cell relative h-32 overflow-hidden rounded-md border p-1',
+          day ? 'cursor-pointer border-border/70' : 'day-cell-empty border-border/50',
+          isToday(day) ? 'day-cell-today border-primary/70' : ''
         ]"
         @click="day && emit('dayClicked', day)"
       >
-        <div v-if="day" class="text-right text-xs font-semibold" :class="isToday(day) ? 'text-blue-500' : 'text-gray-800 dark:text-white'">
+        <div v-if="day" class="text-right text-xs font-semibold" :class="isToday(day) ? 'text-primary' : 'text-card-foreground'">
           {{ day.getDate() }}
         </div>
         <div v-if="day && filteredEventsByMonth[day.toISOString().split('T')[0]]" class="space-y-0.5 text-xs">
           <p v-for="event in filteredEventsByMonth[day.toISOString().split('T')[0]]" :key="event.id"
-             :class="[
-               'truncate text-gray-800 dark:text-gray-200 rounded-sm px-1 py-0.5 bg-gray-200 dark:bg-gray-600', // Default background
-             ]"
+             class="month-event-chip truncate rounded-sm px-1 py-0.5 text-card-foreground"
           >
             {{ formatEventTime(event.start.dateTime) }} {{ event.summary }}
           </p>
@@ -153,5 +152,24 @@ function isToday(date: Date | null) {
 </template>
 
 <style scoped>
-/* Add any specific styles for MonthView here */
+.day-cell {
+  background-color: hsl(var(--background) / 0.2);
+}
+
+.day-cell-empty {
+  background-color: hsl(var(--secondary) / 0.38);
+}
+
+.day-cell-today {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+.month-event-chip {
+  border: 1px solid hsl(var(--border) / 0.55);
+  background-color: hsl(var(--secondary) / 0.45);
+}
+
+.month-today-button {
+  border: 1px solid hsl(var(--border) / 0.65);
+}
 </style>

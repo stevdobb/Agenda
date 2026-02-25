@@ -17,6 +17,20 @@
     <meta name="twitter:description" content="Quickly add events to your Google Calendar using natural language.">
     <meta name="twitter:image" content="/pwa-512x512.png">
     <title>Natural Agenda</title>
+    <script>
+      // GitHub Pages SPA fallback: restore the original path after 404.html redirect.
+      ;(function (location) {
+        if (location.search[1] !== '/') return
+        const decoded = location.search
+          .slice(1)
+          .split('&')
+          .map(function (part) {
+            return part.replace(/~and~/g, '&')
+          })
+          .join('?')
+        window.history.replaceState(null, '', decoded + location.hash)
+      })(window.location)
+    </script>
   </head>
   <body>
     <div id="app"></div>

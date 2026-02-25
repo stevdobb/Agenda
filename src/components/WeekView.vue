@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineProps, computed } from 'vue'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
+import { Button } from '@/components/ui/button'
 
 const props = defineProps<{
   currentDate: Date,
@@ -97,19 +98,19 @@ function isToday(date: Date) {
 </script>
 
 <template>
-  <div class="mt-8 border-t dark:border-gray-700 pt-6">
+  <div class="week-view mt-8 border-t border-border/70 pt-6">
     <!-- Week Navigation -->
-    <div class="flex items-center justify-between mb-4">
-      <button @click="navigateWeek('prev')" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+    <div class="mb-4 flex items-center justify-between">
+      <Button @click="navigateWeek('prev')" variant="secondary" size="icon" class="border border-border/70">
         <ChevronLeftIcon class="h-5 w-5" />
-      </button>
-      <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ currentWeekRange }}</h3>
-      <button @click="navigateWeek('next')" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+      </Button>
+      <h3 class="text-lg font-semibold text-card-foreground">{{ currentWeekRange }}</h3>
+      <Button @click="navigateWeek('next')" variant="secondary" size="icon" class="border border-border/70">
         <ChevronRightIcon class="h-5 w-5" />
-      </button>
+      </Button>
     </div>
-    <div class="flex justify-center mb-4">
-      <button @click="goToToday" class="px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition">Today</button>
+    <div class="mb-4 flex justify-center">
+      <Button @click="goToToday" class="week-today-button">Today</Button>
     </div>
 
     <!-- Week Days and Events -->
@@ -118,28 +119,41 @@ function isToday(date: Date) {
         v-for="day in weekDays"
         :key="day.toISOString()"
         :class="[
-          'rounded-md p-3',
-          isToday(day) ? 'bg-blue-100 dark:bg-blue-900 border border-blue-500' : 'bg-gray-50 dark:bg-gray-700'
+          'day-card rounded-md border p-3',
+          isToday(day) ? 'day-card-today border-primary/70' : 'border-border/70'
         ]"
       >
-        <h4 class="font-bold text-center mb-2">{{ day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }) }}</h4>
+        <h4 class="mb-2 text-center font-bold text-card-foreground">{{ day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }) }}</h4>
         <div v-if="filteredEventsByWeek[day.toISOString().split('T')[0]] && filteredEventsByWeek[day.toISOString().split('T')[0]].length > 0">
           <ul class="space-y-2">
             <li v-for="event in filteredEventsByWeek[day.toISOString().split('T')[0]]" :key="event.id"
-                :class="[
-                  'text-sm p-1 rounded-md bg-gray-200 dark:bg-gray-600', // Default background
-                ]"
+                class="event-chip rounded-md p-1 text-sm"
             >
-              <p class="font-medium text-gray-800 dark:text-gray-200">{{ formatEventTime(event.start.dateTime) }} - {{ event.summary }}</p>
+              <p class="font-medium text-card-foreground">{{ formatEventTime(event.start.dateTime) }} - {{ event.summary }}</p>
             </li>
           </ul>
         </div>
-        <div v-else class="text-center text-gray-500 dark:text-gray-400 text-sm">No events</div>
+        <div v-else class="text-center text-sm text-muted-foreground">No events</div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Add any specific styles for WeekView here */
+.day-card {
+  background-color: hsl(var(--background) / 0.2);
+}
+
+.day-card-today {
+  background-color: hsl(var(--primary) / 0.24);
+}
+
+.event-chip {
+  border: 1px solid hsl(var(--border) / 0.6);
+  background-color: hsl(var(--secondary) / 0.45);
+}
+
+.week-today-button {
+  border: 1px solid hsl(var(--border) / 0.65);
+}
 </style>

@@ -29,18 +29,11 @@ onMounted(() => {
   // Initial fetch is now handled by watch with { immediate: true }
 })
 
-// Watch for changes in currentDate and refetch events
-watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView], oldValues) => {
-  const [wasLoggedIn] = oldValues || [false];
+// Fetch events whenever auth/view/date changes and user is logged in.
+watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView]) => {
   if (!isLoggedIn) return;
-  // console.log('HomeView Watcher: isLoggedIn:', isLoggedIn, 'newDate:', newDate, 'newView:', newView); // Debug log
-
-  // Initial login fetches a wide range, subsequent view/date changes fetch specific ranges
-  if (wasLoggedIn) {
-    const { fetchStart, fetchEnd } = getFetchRangeForView(newView, newDate);
-    // console.log('HomeView Watcher: Calling fetchUpcomingEvents with fetchStart:', fetchStart, 'fetchEnd:', fetchEnd); // Debug log
-    await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
-  }
+  const { fetchStart, fetchEnd } = getFetchRangeForView(newView, newDate);
+  await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
 }, { immediate: true })
 
 
@@ -321,8 +314,9 @@ async function createEvent() {
     feedbackMessage.value = `✅ Successfully created event: "${summary}" on ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !authStore.is24HourFormat })}`;
     eventText.value = ''; // Clear input
     
-    // Refresh the upcoming events list
-    await authStore.fetchUpcomingEvents(undefined, undefined, true);
+    // Refresh according to the currently visible range to avoid data flicker in month/week views.
+    const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
+    await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
 
   } catch (error: any) {
     feedbackMessage.value = `❌ Error: ${error.message}`;
@@ -353,8 +347,9 @@ async function deleteEvent(eventId: string) {
   try {
     await deleteCalendarEvent(activeAccount.accessToken, eventId);
     feedbackMessage.value = '✅ Event successfully deleted.';
-    // Refresh the event list
-    await authStore.fetchUpcomingEvents(undefined, undefined, true);
+    // Refresh according to the currently visible range to avoid data flicker in month/week views.
+    const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
+    await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
   } catch (error: any) {
     feedbackMessage.value = `❌ Error deleting event: ${error.message}`;
     console.error(error);
@@ -417,7 +412,7 @@ function handleViewSwitch(view: string) {
 </script>
 
 <template>
-  <div class="year-weather-theme page-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+  <div class="year-weather-theme page-container mx-auto max-w-7xl p-4 pt-28 sm:p-6 sm:pt-32 lg:p-8 lg:pt-32">
     <TopMenu 
       :currentView="currentView" 
       :showSettings="true" 

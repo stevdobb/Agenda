@@ -52,8 +52,6 @@ const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) 
       
       // Pass user_id (from sub claim) and userinfo to setToken
       authStore.setToken(tokenResponse.access_token, Number(tokenResponse.expires_in), userinfo.sub, userinfo)
-      // Fetch upcoming events after login (for all accounts)
-      await authStore.fetchUpcomingEvents();
       if (pendingTokenRequest) {
         pendingTokenRequest.resolve(tokenResponse);
       }

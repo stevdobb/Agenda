@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { useCalendarStore } from '@/stores/calendar'
-import { XMarkIcon, SunIcon, MoonIcon, ClockIcon, CalendarDaysIcon, ArrowRightEndOnRectangleIcon, PlusIcon } from '@heroicons/vue/24/solid'
+import { XMarkIcon, ClockIcon, CalendarDaysIcon, ArrowRightEndOnRectangleIcon, PlusIcon } from '@heroicons/vue/24/solid'
 import { requestAccessToken } from '@/services/gsiService';
 
 const authStore = useAuthStore()
@@ -47,18 +47,6 @@ const close = () => {
         <div class="flex flex-col space-y-6">
           <!-- General Settings -->
           <div class="space-y-4">
-            <div class="flex items-center justify-between p-3 rounded-md bg-gray-50 dark:bg-gray-700">
-              <div class="flex items-center">
-                <MoonIcon v-if="authStore.isDarkMode" class="h-5 w-5 mr-3 text-yellow-400" />
-                <SunIcon v-else class="h-5 w-5 mr-3 text-orange-400" />
-                <span>Donkere Modus</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" :checked="authStore.isDarkMode" @change="authStore.toggleDarkMode" />
-                <span class="slider round"></span>
-              </label>
-            </div>
-
             <div class="flex items-center justify-between p-3 rounded-md bg-gray-50 dark:bg-gray-700">
               <div class="flex items-center">
                 <ClockIcon class="h-5 w-5 mr-3 text-blue-400" />

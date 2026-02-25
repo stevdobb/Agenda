@@ -98,6 +98,14 @@ dist
 .cache/
 # This file is created by Gatsby and is not meant to be checked in
 public
+!public/
+public/*
+!public/404.html
+!public/apple-touch-icon.png
+!public/favicon.ico
+!public/masked-icon.svg
+!public/pwa-192x192.png
+!public/pwa-512x512.png
 
 # vuepress build output
 .vuepress/dist

@@ -284,10 +284,6 @@ function checkDarkMode() {
       is24HourFormat.value = JSON.parse(format24Hour);
     }
 
-    // Fetch events for all active accounts if logged in
-    if (accounts.value.length > 0) {
-      await fetchUpcomingEvents();
-    }
   }
 
   return {
