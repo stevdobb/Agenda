@@ -417,7 +417,7 @@ function handleViewSwitch(view: string) {
 </script>
 
 <template>
-  <div class="max-w-xl mx-auto p-3 sm:p-3 lg:max-w-7xl xl:max-w-full">
+  <div class="year-weather-theme page-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
     <TopMenu 
       :currentView="currentView" 
       :showSettings="true" 
@@ -427,32 +427,31 @@ function handleViewSwitch(view: string) {
       @openSettings="showSettingsModal = true" 
     />
 
-    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
+    <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
 
 
-      <div v-if="authStore.isLoggedIn" class="mt-6 border-t dark:border-gray-700 pt-6">
+      <div v-if="authStore.isLoggedIn" class="mt-6 border-t border-border/70 pt-6">
         <!-- Todo List Section -->
         <div v-if="todoStore.todos.length > 0" class="mb-8">
-          <h2 class="text-xl font-semibold mb-4 flex items-center dark:text-white">
-            <CheckBadgeIcon class="h-6 w-6 mr-2 text-gray-700 dark:text-gray-300" />
+          <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
+            <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
             My Todos
           </h2>
           <ul class="space-y-2">
             <li v-for="todo in todoStore.todos" :key="todo.id"
-                :class="['p-3 rounded-md border flex items-center justify-between space-x-3',
-                         todo.completed ? 'bg-green-50 dark:bg-green-700 border-green-200 dark:border-green-600 line-through text-gray-500' : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600']">
+                :class="['todo-row flex items-center justify-between space-x-3 rounded-md border p-3', todo.completed ? 'todo-row-completed line-through' : '']">
               <div class="flex items-center space-x-3">
                 <input type="checkbox" :checked="todo.completed" @change="todoStore.toggleTodo(todo.id)" class="form-checkbox h-5 w-5 text-blue-600">
-                <span class="font-medium text-gray-800 dark:text-white">{{ todo.content }}</span>
+                <span class="font-medium text-card-foreground">{{ todo.content }}</span>
               </div>
-              <button @click="todoStore.removeTodo(todo.id)" class="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-700">
+              <button @click="todoStore.removeTodo(todo.id)" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                 <TrashIcon class="h-5 w-5" />
               </button>
             </li>
           </ul>
         </div>
         
-        <h2 class="text-xl font-semibold mb-4 dark:text-white">Create a new event</h2>
+        <h2 class="mb-4 text-xl font-semibold text-card-foreground">Create a new event</h2>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
           autofocus
@@ -460,12 +459,12 @@ function handleViewSwitch(view: string) {
             @keyup.enter="createEvent"
             type="text"
             placeholder="e.g., Meeting with John tomorrow at 2pm"
-            class="flex-grow p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+            class="agenda-input flex-grow rounded-md border p-3 transition"
           />
           <button
             @click="createEvent"
             :disabled="isLoading"
-            class="p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center transition w-full sm:w-16 mt-2 sm:mt-0"
+            class="agenda-create-button mt-2 flex w-full items-center justify-center rounded-md p-3 text-white transition sm:mt-0 sm:w-16"
             aria-label="Create Event"
           >
              <svg v-if="isLoading" class="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -475,19 +474,19 @@ function handleViewSwitch(view: string) {
             <PlusIcon v-else class="h-6 w-6" />
           </button>
         </div>
-        <div v-if="feedbackMessage" class="mt-4 text-sm" :class="feedbackMessage.includes('Error') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+        <div v-if="feedbackMessage" class="mt-4 text-sm" :class="feedbackMessage.includes('Error') ? 'text-red-200' : 'text-emerald-200'">
           {{ feedbackMessage }}
         </div>
 
         <!-- List View -->
-        <div v-if="currentView === 'list'" class="mt-8 border-t dark:border-gray-700 pt-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center dark:text-white">
-            <CalendarDaysIcon class="h-6 w-6 mr-2 text-gray-700 dark:text-gray-300" />
+        <div v-if="currentView === 'list'" class="mt-8 border-t border-border/70 pt-6">
+          <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
+            <CalendarDaysIcon class="mr-2 h-6 w-6 text-muted-foreground" />
             Upcoming Events
           </h2>
           <div v-if="displayedGroupedEvents.length > 0" class="space-y-6 xl:grid xl:grid-cols-4 xl:space-y-0 xl:gap-6">
             <div v-for="dayGroup in displayedGroupedEvents" :key="dayGroup.date" class="space-y-3">
-              <h3 class="text-sm font-semibold text-gray-800 dark:text-white border-b dark:border-gray-700 pb-1 mb-1">
+              <h3 class="mb-1 border-b border-border/70 pb-1 text-sm font-semibold text-card-foreground">
                 {{ formatDayHeader(dayGroup.date) }}
               </h3>
               <ul class="space-y-1">
@@ -495,28 +494,28 @@ function handleViewSwitch(view: string) {
                   v-for="event in dayGroup.events"
                   :key="event.id"
                   :class="[
-                    'p-2 text-sm rounded-md border flex items-center justify-between space-x-2 transition-all duration-200',
+                    'event-row flex items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200',
                     event.id === lastAddedEventId
-                      ? 'bg-green-100 dark:bg-green-800 border-green-400 dark:border-green-600 shadow'
+                      ? 'event-row-success shadow'
                       : isEventToday(event)
-                        ? 'bg-blue-100 dark:bg-blue-900 border-blue-500'
-                        : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                        ? 'event-row-today'
+                        : 'event-row-default'
                   ]"
                 >
                   <div class="flex items-start space-x-2">
-                    <p class="text-xs font-medium text-gray-700 dark:text-gray-300 w-16 flex-shrink-0">
+                    <p class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
                       {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
                     </p>
-                    <p class="font-semibold text-sm text-gray-800 dark:text-white">{{ event.summary }}</p>
+                    <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
                   </div>
-                  <button @click="deleteEvent(event.id)" :disabled="isLoading" class="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-700" aria-label="Delete event">
+                  <button @click="deleteEvent(event.id)" :disabled="isLoading" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" aria-label="Delete event">
                     <TrashIcon class="h-5 w-5" />
                   </button>
                 </li>
               </ul>
             </div>
           </div>
-          <div v-else class="text-center text-gray-500 dark:text-gray-400 p-4 border-2 border-dashed rounded-md dark:border-gray-600">
+          <div v-else class="rounded-md border-2 border-dashed border-border/70 p-4 text-center text-muted-foreground">
             <p>No upcoming events found.</p>
           </div>
         </div>
@@ -530,14 +529,14 @@ function handleViewSwitch(view: string) {
           <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" @dayClicked="handleMonthDayClick" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
         </div>
       </div>
-      <div v-else class="text-center py-12">
+      <div v-else class="py-12 text-center">
         <!-- <h2 class="text-xl font-semibold mb-4 dark:text-white">Welcome to Natural Agenda</h2> -->
-        <p class="text-gray-500 dark:text-gray-400 mb-6">
+        <p class="mb-6 text-muted-foreground">
           Please log in with your Google account to connect your calendar and see your events.
         </p>
         <button
           @click="handleLogin"
-          class="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center mx-auto transition"
+          class="agenda-create-button mx-auto flex items-center justify-center rounded-md px-6 py-3 text-white transition"
         >
           Login with Google
         </button>
@@ -549,3 +548,58 @@ function handleViewSwitch(view: string) {
     <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
   </div>
 </template>
+
+<style scoped>
+.agenda-shell-panel {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--card) / 0.9);
+  box-shadow: 0 14px 30px hsl(218 72% 20% / 0.22), inset 0 1px 0 hsl(0 0% 100% / 0.18);
+}
+
+.agenda-input {
+  border-color: hsl(var(--input) / 0.85);
+  background-color: hsl(var(--background) / 0.25);
+  color: hsl(var(--card-foreground));
+}
+
+.agenda-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.agenda-input:focus {
+  border-color: hsl(var(--ring));
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3);
+}
+
+.agenda-create-button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.agenda-create-button:hover {
+  filter: brightness(0.95);
+}
+
+.todo-row,
+.event-row-default {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--background) / 0.2);
+}
+
+.todo-row-completed {
+  border-color: hsl(156 63% 42% / 0.5);
+  background-color: hsl(156 63% 42% / 0.2);
+  color: hsl(var(--muted-foreground));
+}
+
+.event-row-today {
+  border-color: hsl(var(--primary) / 0.7);
+  background-color: hsl(var(--primary) / 0.25);
+}
+
+.event-row-success {
+  border-color: hsl(156 63% 42% / 0.7);
+  background-color: hsl(156 63% 42% / 0.28);
+}
+</style>

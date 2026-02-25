@@ -10,7 +10,11 @@ import { useUiStore } from './stores/ui'
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const route = useRoute()
-const isYearRoute = computed(() => route.path === '/year')
+const weatherLayoutRouteNames = new Set(['year', 'year-alias', 'agenda', 'settings'])
+const isWeatherRoute = computed(() => {
+  const currentName = typeof route.name === 'string' ? route.name : ''
+  return weatherLayoutRouteNames.has(currentName)
+})
 
 onMounted(() => {
   initializeGsi();
@@ -20,7 +24,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div :class="['min-h-screen flex flex-col', isYearRoute ? 'year-route-bg' : 'bg-gray-100 dark:bg-gray-900']">
+  <div :class="['min-h-screen flex flex-col', isWeatherRoute ? 'year-route-bg' : 'bg-gray-100 dark:bg-gray-900']">
 
     <main class="flex-grow">
       <RouterView />

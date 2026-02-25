@@ -84,6 +84,12 @@ export function initializeGsi(): Promise<void> {
           client_id: GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
           callback: gisCallback,
+          error_callback: (error: any) => {
+            if (pendingTokenRequest) {
+              pendingTokenRequest.reject(new Error(error?.message || 'Google token request failed.'));
+            }
+            clearPendingTokenRequest();
+          },
         });
         resolve();
       } else {
@@ -126,12 +132,13 @@ export function requestAccessToken(options?: RequestAccessTokenOptions): Promise
         return;
       }
 
-      const requestOptions: any = {};
+      const requestOptions: google.accounts.oauth2.OverridableTokenClientConfig = {};
       if (typeof options?.prompt === 'string') {
         requestOptions.prompt = options.prompt;
       }
       if (options?.hint) {
         requestOptions.hint = options.hint;
+        requestOptions.login_hint = options.hint;
       }
 
       tokenClient.requestAccessToken(requestOptions);
