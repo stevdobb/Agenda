@@ -346,9 +346,8 @@ async function deleteEvent(eventId: string) {
     return null;
   });
   if (!activeAccount) {
-      feedbackMessage.value = `❌ Error: No active account found to delete event.`;
-      isLoading.value = false;
-      return;
+    isLoading.value = false;
+    return;
   }
 
   try {

@@ -2,6 +2,12 @@
 // This is not exhaustive but covers the needs of this application.
 
 declare namespace google.accounts.oauth2 {
+  interface OverridableTokenClientConfig {
+    prompt?: string;
+    hint?: string;
+    login_hint?: string;
+  }
+
   interface TokenResponse {
     access_token: string;
     expires_in: number;
@@ -19,7 +25,7 @@ declare namespace google.accounts.oauth2 {
   }
 
   interface TokenClient {
-    requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+    requestAccessToken: (overrideConfig?: OverridableTokenClientConfig) => void;
   }
 
   function initTokenClient(config: TokenClientConfig): TokenClient;

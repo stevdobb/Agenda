@@ -11,9 +11,13 @@ const emit = defineEmits(['close'])
 
 function handleLogin(isAddAnother: boolean = false) {
   if (isAddAnother) {
-    requestAccessToken({ prompt: 'select_account' });
+    requestAccessToken({ prompt: 'select_account' }).catch((error: any) => {
+      console.error('Failed to add account:', error)
+    });
   } else {
-    requestAccessToken();
+    requestAccessToken().catch((error: any) => {
+      console.error('Failed to request access token:', error)
+    });
   }
 }
 

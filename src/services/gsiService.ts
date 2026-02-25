@@ -126,7 +126,7 @@ export function requestAccessToken(options?: RequestAccessTokenOptions): Promise
         return;
       }
 
-      const requestOptions: google.accounts.oauth2.OverridableTokenClientConfig = {};
+      const requestOptions: any = {};
       if (typeof options?.prompt === 'string') {
         requestOptions.prompt = options.prompt;
       }
