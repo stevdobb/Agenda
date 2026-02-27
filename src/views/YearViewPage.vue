@@ -318,6 +318,11 @@ async function scrollToEventEditor() {
   display: none;
 }
 
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
 @media print {
   .year-weather-theme {
     background: #fff !important;
@@ -361,6 +366,20 @@ async function scrollToEventEditor() {
     padding: 0 !important;
     /* Remove position absolute to allow normal flow */
     position: static; 
+  }
+
+  .page-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-legend-container {
+    break-before: page;
+    page-break-before: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-top: 8mm !important;
   }
 
   body {

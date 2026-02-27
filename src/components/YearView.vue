@@ -135,6 +135,13 @@ function getDayBorderClass(monthIndex: number, day: number) {
   }
   return '';
 }
+
+function getEventTextStyle(event: CalendarEvent) {
+  if (isSchoolHolidayEvent(event)) {
+    return { color: '#000000' }
+  }
+  return { color: event.color }
+}
 </script>
 
 <template>
@@ -168,7 +175,7 @@ function getDayBorderClass(monthIndex: number, day: number) {
       <div class="month-events mt-auto space-y-2 border-t pt-2">
         <div v-for="event in getEventsForMonth(month)" :key="event.id" class="event-row flex items-start space-x-2 text-xs">
             <span class="event-date min-w-[1.25rem] shrink-0 text-right font-bold">{{ getEventDateDisplay(event) }}</span>
-            <span class="event-text truncate" :title="event.customName || event.type" :style="{ color: event.color }">{{ event.customName || event.type }}</span>
+            <span class="event-text truncate" :title="event.customName || event.type" :style="getEventTextStyle(event)">{{ event.customName || event.type }}</span>
         </div>
       </div>
     </div>
@@ -218,8 +225,15 @@ function getDayBorderClass(monthIndex: number, day: number) {
   border-color: hsl(var(--border) / 0.6);
 }
 
+.event-row {
+  border: 1px solid hsl(210 10% 72% / 0.9);
+  border-radius: 0.45rem;
+  background-color: hsl(210 14% 92% / 0.95);
+  padding: 0.3rem 0.45rem;
+}
+
 .event-date {
-  color: hsl(var(--primary));
+  color: #000000;
 }
 
 .event-text {
@@ -227,11 +241,25 @@ function getDayBorderClass(monthIndex: number, day: number) {
 }
 
 @media print {
+  .year-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+  }
+
   .year-month-card {
     border-color: hsl(20 5.9% 90%);
     background-color: #fff;
     color: hsl(20 14.3% 4.1%);
     box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .month-grid,
+  .month-events {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .month-meta,
@@ -254,6 +282,11 @@ function getDayBorderClass(monthIndex: number, day: number) {
 
   .month-events {
     border-color: hsl(20 5.9% 90%);
+  }
+
+  .event-row {
+    border-color: hsl(20 5.9% 86%);
+    background-color: hsl(0 0% 98%);
   }
 
   .event-date {
