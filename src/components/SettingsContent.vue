@@ -57,56 +57,56 @@ function setActiveAccount(accountId: string) {
 
       <div class="border-t pt-6 dark:border-gray-700">
         <h4 class="mb-3 text-lg font-semibold">Verbonden Accounts</h4>
-        <div v-if="authStore.accounts.length > 0" class="mb-4 space-y-3">
-          <div
-            v-for="account in authStore.accounts"
-            :key="account.id"
-            :class="[
-              'flex items-center justify-between rounded-md border p-3',
-              authStore.activeAccountId === account.id
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900'
-                : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'
-            ]"
-          >
-            <div class="flex truncate items-center">
-              <span
-                :class="[
-                  'mr-3 h-4 w-4 shrink-0 rounded-full',
-                  account.color.split(' ')[0],
-                  account.color.split(' ')[1],
-                  account.color.split(' ')[2].replace('border', 'bg')
-                ]"
-              ></span>
-              <span class="truncate text-sm">{{ account.user?.email }}</span>
-            </div>
-            <div class="flex shrink-0 space-x-2">
-              <button
-                v-if="authStore.activeAccountId !== account.id"
-                class="rounded bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
-                @click="setActiveAccount(account.id)"
-              >
-                Actief Instellen
-              </button>
-              <button
-                class="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
-                @click="authStore.removeAccount(account.id)"
-              >
-                Verwijderen
-              </button>
+        <template v-if="authStore.isLoggedIn">
+          <div class="mb-4 space-y-3">
+            <div
+              v-for="account in authStore.accounts"
+              :key="account.id"
+              :class="[
+                'flex items-center justify-between rounded-md border p-3',
+                authStore.activeAccountId === account.id
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900'
+                  : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'
+              ]"
+            >
+              <div class="flex truncate items-center">
+                <span
+                  :class="[
+                    'mr-3 h-4 w-4 shrink-0 rounded-full',
+                    account.color.split(' ')[0],
+                    account.color.split(' ')[1],
+                    account.color.split(' ')[2].replace('border', 'bg')
+                  ]"
+                ></span>
+                <span class="truncate text-sm">{{ account.user?.email }}</span>
+              </div>
+              <div class="flex shrink-0 space-x-2">
+                <button
+                  v-if="authStore.activeAccountId !== account.id"
+                  class="rounded bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
+                  @click="setActiveAccount(account.id)"
+                >
+                  Actief Instellen
+                </button>
+                <button
+                  class="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
+                  @click="authStore.removeAccount(account.id)"
+                >
+                  Verwijderen
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <button
-          class="flex w-full items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-          @click="handleLogin(true)"
-        >
-          <PlusIcon class="mr-2 h-5 w-5" />
-          Nog een Account Toevoegen
-        </button>
+          <button
+            class="flex w-full items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            @click="handleLogin(true)"
+          >
+            <PlusIcon class="mr-2 h-5 w-5" />
+            Nog een Account Toevoegen
+          </button>
 
-        <div class="mt-4 border-t pt-4 dark:border-gray-700">
-          <div v-if="authStore.accounts.length > 0" class="text-center">
+          <div class="mt-4 border-t pt-4 dark:border-gray-700 text-center">
             <button
               class="mx-auto flex items-center justify-center rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600"
               @click="authStore.clearAuth()"
@@ -115,17 +115,18 @@ function setActiveAccount(accountId: string) {
               Alle Accounts Uitloggen
             </button>
           </div>
-          <div v-else class="text-center">
-            <button
-              class="mx-auto flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-              @click="handleLogin(false)"
-            >
-              Inloggen met Google
-            </button>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-300">
-              Je moet inloggen om je Google Calendar te verbinden.
-            </p>
-          </div>
+        </template>
+
+        <div v-else class="text-center">
+          <button
+            class="mx-auto flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            @click="handleLogin(false)"
+          >
+            Inloggen met Google
+          </button>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-300">
+            Je moet inloggen om je Google Calendar te verbinden.
+          </p>
         </div>
       </div>
     </div>
