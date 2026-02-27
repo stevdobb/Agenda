@@ -10,7 +10,7 @@ import { useUiStore } from './stores/ui'
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 const route = useRoute()
-const weatherLayoutRouteNames = new Set(['year', 'year-alias', 'agenda', 'settings'])
+const weatherLayoutRouteNames = new Set(['year', 'agenda', 'settings'])
 const isWeatherRoute = computed(() => {
   const currentName = typeof route.name === 'string' ? route.name : ''
   return weatherLayoutRouteNames.has(currentName)
@@ -29,7 +29,6 @@ onMounted(() => {
     <main class="flex-grow">
       <RouterView />
     </main>
-    <InstallButton class="fixed bottom-4 right-4"/>
     <AlertModal
       v-if="uiStore.isAlertVisible"
       :title="uiStore.alertTitle"

@@ -153,6 +153,15 @@ function handleViewSwitch(view: string) {
   }
 }
 
+function handleOpenSettings() {
+  if (window.matchMedia('(max-width: 767px)').matches) {
+    router.push('/settings')
+    return
+  }
+
+  showSettingsModal.value = true
+}
+
 async function scrollToEventEditor() {
   await nextTick()
   eventEditorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -176,7 +185,7 @@ async function scrollToEventEditor() {
         :showSettings="true" 
         :showRefresh="false" 
         @update:view="handleViewSwitch" 
-        @openSettings="showSettingsModal = true"
+        @openSettings="handleOpenSettings"
       />
 
       <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">

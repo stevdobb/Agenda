@@ -1,26 +1,33 @@
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import TopMenu from '@/components/TopMenu.vue'
+import SettingsContent from '@/components/SettingsContent.vue'
 
-const authStore = useAuthStore()
+const router = useRouter()
 
-// Ensure auth state is initialized on component mount
-authStore.checkAuth()
+function handleViewSwitch(view: string) {
+  if (view === 'year') {
+    router.push('/year')
+    return
+  }
+
+  router.push('/agenda')
+}
 </script>
 
 <template>
   <div class="year-weather-theme">
-    <div class="page-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-      <h1 class="mb-6 text-3xl font-bold text-card-foreground">Settings</h1>
+    <div class="page-container mx-auto max-w-7xl px-4 pb-4 pt-28 sm:px-6 sm:pb-6 sm:pt-32 lg:px-8 lg:pb-8 lg:pt-32">
+      <TopMenu
+        currentView="list"
+        :showSettings="false"
+        :showRefresh="false"
+        @update:view="handleViewSwitch"
+      />
 
-      <div class="settings-panel mb-6 rounded-lg border p-4">
-        <h2 class="mb-4 text-2xl font-semibold text-card-foreground">Time Format</h2>
-        <div class="flex items-center justify-between">
-          <label for="timeFormatToggle" class="text-lg text-card-foreground">Use 24-hour format</label>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="timeFormatToggle" class="sr-only peer" :checked="authStore.is24HourFormat" @change="authStore.toggle24HourFormat()">
-            <div class="h-6 w-11 rounded-full bg-secondary peer peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-ring/40 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-border after:bg-white after:transition-all after:content-['']"></div>
-          </label>
-        </div>
+      <div class="settings-panel rounded-lg border p-4 sm:p-6">
+        <h1 class="mb-6 text-2xl font-semibold text-card-foreground sm:text-3xl">Instellingen</h1>
+        <SettingsContent />
       </div>
     </div>
   </div>

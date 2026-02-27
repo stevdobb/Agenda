@@ -172,7 +172,7 @@ function getEventTextStyle(event: CalendarEvent) {
       </div>
 
       <!-- Events List -->
-      <div class="month-events mt-auto space-y-2 border-t pt-2">
+      <div class="month-events space-y-2 border-t pt-2">
         <div v-for="event in getEventsForMonth(month)" :key="event.id" class="event-row flex items-start space-x-2 text-xs">
             <span class="event-date min-w-[1.25rem] shrink-0 text-right font-bold">{{ getEventDateDisplay(event) }}</span>
             <span class="event-text truncate" :title="event.customName || event.type" :style="getEventTextStyle(event)">{{ event.customName || event.type }}</span>

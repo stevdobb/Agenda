@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { CalendarDays, CalendarRange, LayoutGrid, List, Menu, RefreshCcw, Settings2, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,12 +12,20 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:view', 'refresh', 'openSettings'])
 const mobileMenuOpen = ref(false)
+const showInstallButton = ref(false)
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null
 
 const viewItems = [
-  { key: 'year', label: 'Year', icon: LayoutGrid },
   { key: 'list', label: 'List', icon: List },
   { key: 'week', label: 'Week', icon: CalendarRange },
   { key: 'month', label: 'Month', icon: CalendarDays },
+  { key: 'year', label: 'Year', icon: LayoutGrid },
 ]
 
 function selectView(viewKey: string) {
@@ -34,6 +42,52 @@ function triggerSettings() {
   emit('openSettings')
   mobileMenuOpen.value = false
 }
+
+function isPwaInstalled() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    document.referrer.includes('android-app://')
+  )
+}
+
+function updateInstallButtonState() {
+  showInstallButton.value = Boolean(deferredPrompt) && !isPwaInstalled()
+}
+
+function handleBeforeInstallPrompt(event: Event) {
+  event.preventDefault()
+  deferredPrompt = event as BeforeInstallPromptEvent
+  updateInstallButtonState()
+}
+
+function handleAppInstalled() {
+  deferredPrompt = null
+  showInstallButton.value = false
+}
+
+async function installPwa() {
+  if (!deferredPrompt) {
+    return
+  }
+
+  await deferredPrompt.prompt()
+  await deferredPrompt.userChoice
+  deferredPrompt = null
+  showInstallButton.value = false
+  mobileMenuOpen.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  window.addEventListener('appinstalled', handleAppInstalled)
+  updateInstallButtonState()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  window.removeEventListener('appinstalled', handleAppInstalled)
+})
 </script>
 
 <template>
@@ -42,12 +96,12 @@ function triggerSettings() {
       <CardContent class="px-0 py-2 sm:py-3">
         <div class="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">
           <div class="flex items-center justify-between gap-2 py-1 text-card-foreground">
-            <div class="flex items-center gap-2">
+            <router-link to="/" class="flex items-center gap-2 transition-opacity hover:opacity-85" @click="mobileMenuOpen = false">
               <span class="top-navbar-logo inline-flex h-8 w-8 items-center justify-center rounded-md">
                 <img src="/pwa-192x192.png" alt="" class="top-navbar-logo-image h-4 w-4" />
               </span>
               <span class="text-sm font-semibold tracking-wide">Natural Agenda</span>
-            </div>
+            </router-link>
 
             <Button
               size="icon"
@@ -77,6 +131,15 @@ function triggerSettings() {
           </div>
 
           <div class="hidden items-center justify-end gap-2 px-1 md:flex">
+            <Button
+              v-if="showInstallButton"
+              @click="installPwa"
+              variant="outline"
+              size="sm"
+              class="border-border/80"
+            >
+              Installeer App
+            </Button>
             <Button v-if="props.showRefresh" @click="emit('refresh')" variant="outline" size="icon" class="border-border/80" aria-label="Refresh Events">
               <RefreshCcw class="h-4 w-4" />
             </Button>
@@ -109,7 +172,10 @@ function triggerSettings() {
               </Button>
             </div>
 
-            <div v-if="props.showRefresh || props.showSettings" class="mt-3 flex items-center gap-2">
+            <div v-if="showInstallButton || props.showRefresh || props.showSettings" class="mt-3 flex items-center gap-2">
+              <Button v-if="showInstallButton" @click="installPwa" variant="outline" class="flex-1 border-border/80">
+                Installeer App
+              </Button>
               <Button v-if="props.showRefresh" @click="triggerRefresh" variant="outline" class="flex-1 border-border/80">
                 <RefreshCcw class="h-4 w-4" />
                 Refresh

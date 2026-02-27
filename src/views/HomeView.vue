@@ -3,7 +3,6 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
-import InstallButton from '@/components/InstallButton.vue'
 import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
 import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
@@ -409,6 +408,15 @@ function handleViewSwitch(view: string) {
     currentView.value = view as 'list' | 'week' | 'month'
   }
 }
+
+function handleOpenSettings() {
+  if (window.matchMedia('(max-width: 767px)').matches) {
+    router.push('/settings')
+    return
+  }
+
+  showSettingsModal.value = true
+}
 </script>
 
 <template>
@@ -420,7 +428,7 @@ function handleViewSwitch(view: string) {
         :showRefresh="true" 
         @update:view="handleViewSwitch" 
         @refresh="manualFetchEvents" 
-        @openSettings="showSettingsModal = true" 
+        @openSettings="handleOpenSettings" 
       />
 
       <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
@@ -538,8 +546,6 @@ function handleViewSwitch(view: string) {
         </button>
         </div>
       </div>
-      <InstallButton />
-
       <!-- Settings Modal -->
       <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
     </div>
