@@ -31,6 +31,14 @@ onMounted(() => {
 // Fetch events whenever auth/view/date changes and user is logged in.
 watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView]) => {
   if (!isLoggedIn) return;
+
+  try {
+    await ensureActiveAccessToken();
+  } catch (error: any) {
+    feedbackMessage.value = `❌ Error: ${error.message}`;
+    return;
+  }
+
   const { fetchStart, fetchEnd } = getFetchRangeForView(newView, newDate);
   await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
 }, { immediate: true })

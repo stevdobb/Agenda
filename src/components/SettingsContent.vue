@@ -6,6 +6,7 @@ import { requestAccessToken } from '@/services/gsiService'
 
 const authStore = useAuthStore()
 const calendarStore = useCalendarStore()
+const tokenRefreshBufferMs = 30 * 1000
 
 function handleLogin(isAddAnother = false) {
   if (isAddAnother) {
@@ -20,9 +21,20 @@ function handleLogin(isAddAnother = false) {
   })
 }
 
-function setActiveAccount(accountId: string) {
+async function setActiveAccount(accountId: string) {
   authStore.activeAccountId = accountId
-  authStore.fetchUpcomingEvents()
+  const selectedAccount = authStore.accounts.find((account) => account.id === accountId)
+
+  if (selectedAccount && selectedAccount.expiresAt <= Date.now() + tokenRefreshBufferMs) {
+    await requestAccessToken({
+      prompt: '',
+      hint: selectedAccount.user?.email,
+    }).catch((error: any) => {
+      console.error('Failed to refresh token for selected account:', error)
+    })
+  }
+
+  await authStore.fetchUpcomingEvents()
   localStorage.setItem('active_google_account_id', accountId)
 }
 </script>
