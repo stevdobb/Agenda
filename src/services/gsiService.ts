@@ -3,8 +3,12 @@ import { useUiStore } from '@/stores/ui';
 
 const GOOGLE_CLIENT_ID = '350064938484-i5mqo80eieq2e966i10kus824r4p7pmc.apps.googleusercontent.com';
 const TOKEN_REQUEST_TIMEOUT_MS = 20000;
+const GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+const GSI_SCRIPT_LOAD_TIMEOUT_MS = 15000;
 
 let tokenClient: google.accounts.oauth2.TokenClient | undefined;
+let gsiLoadPromise: Promise<void> | null = null;
+let gsiInitPromise: Promise<void> | null = null;
 let pendingTokenRequest:
   | {
       resolve: (value: google.accounts.oauth2.TokenResponse) => void;
@@ -24,6 +28,76 @@ function clearPendingTokenRequest() {
   }
   clearTimeout(pendingTokenRequest.timeoutId);
   pendingTokenRequest = null;
+}
+
+function isGsiReady() {
+  return Boolean(window.google?.accounts?.oauth2);
+}
+
+function waitForGsiScript(): Promise<void> {
+  if (isGsiReady()) {
+    return Promise.resolve();
+  }
+
+  if (gsiLoadPromise) {
+    return gsiLoadPromise;
+  }
+
+  const loadPromise: Promise<void> = new Promise<void>((resolve, reject) => {
+    let script = document.querySelector(`script[src="${GSI_SCRIPT_URL}"]`) as HTMLScriptElement | null;
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      script?.removeEventListener('load', onLoad);
+      script?.removeEventListener('error', onError);
+    };
+
+    const resolveIfReady = () => {
+      if (!isGsiReady()) {
+        return false;
+      }
+      cleanup();
+      resolve();
+      return true;
+    };
+
+    const onLoad = () => {
+      if (resolveIfReady()) {
+        return;
+      }
+      cleanup();
+      reject(new Error('Google GSI loaded, but oauth2 API is unavailable.'));
+    };
+
+    const onError = () => {
+      cleanup();
+      reject(new Error('Failed to load Google GSI script.'));
+    };
+
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Google GSI script not loaded (timeout).'));
+    }, GSI_SCRIPT_LOAD_TIMEOUT_MS);
+
+    if (!script) {
+      script = document.createElement('script');
+      script.src = GSI_SCRIPT_URL;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    script.addEventListener('load', onLoad);
+    script.addEventListener('error', onError);
+
+    // The script may already be loaded before listeners are attached.
+    resolveIfReady();
+  }).finally(() => {
+    gsiLoadPromise = null;
+  });
+
+  gsiLoadPromise = loadPromise;
+  return loadPromise;
 }
 
 // This function handles the response from Google after a token is received
@@ -75,28 +149,34 @@ const gisCallback = async (tokenResponse: google.accounts.oauth2.TokenResponse) 
 
 // Initializes the Google Identity Services client
 export function initializeGsi(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      if (window.google && window.google.accounts) {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-          callback: gisCallback,
-          error_callback: (error: any) => {
-            if (pendingTokenRequest) {
-              pendingTokenRequest.reject(new Error(error?.message || 'Google token request failed.'));
-            }
-            clearPendingTokenRequest();
-          },
-        });
-        resolve();
-      } else {
-        reject(new Error("Google GSI script not loaded."));
-      }
-    } catch (error) {
-      reject(error);
-    }
-  });
+  if (tokenClient) {
+    return Promise.resolve();
+  }
+
+  if (gsiInitPromise) {
+    return gsiInitPromise;
+  }
+
+  const initPromise: Promise<void> = waitForGsiScript()
+    .then(() => {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+        callback: gisCallback,
+        error_callback: (error: any) => {
+          if (pendingTokenRequest) {
+            pendingTokenRequest.reject(new Error(error?.message || 'Google token request failed.'));
+          }
+          clearPendingTokenRequest();
+        },
+      });
+    })
+    .finally(() => {
+      gsiInitPromise = null;
+    });
+
+  gsiInitPromise = initPromise;
+  return initPromise;
 }
 
 // Prompts the user for a new access token

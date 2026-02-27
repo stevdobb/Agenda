@@ -17,7 +17,9 @@ const isWeatherRoute = computed(() => {
 })
 
 onMounted(() => {
-  initializeGsi();
+  initializeGsi().catch((error) => {
+    console.error('Failed to initialize Google GSI:', error);
+  });
   authStore.checkAuth()
   authStore.checkDarkMode()
 })
