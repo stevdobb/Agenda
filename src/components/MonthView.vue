@@ -11,6 +11,25 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:currentDate', 'dayClicked'])
 
+function toLocalDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getEventDateKey(event: any) {
+  if (event.start.date) {
+    return event.start.date
+  }
+
+  if (event.start.dateTime) {
+    return toLocalDateKey(new Date(event.start.dateTime))
+  }
+
+  return ''
+}
+
 
 // Helper to format date and time
 function formatEventTime(dateTime: string) {
@@ -62,7 +81,8 @@ const calendarDays = computed(() => {
 const filteredEventsByMonth = computed(() => {
   const monthEvents: { [key: string]: any[] } = {};
   props.events.forEach(event => {
-    const eventDateStr = (event.start.date || event.start.dateTime).split('T')[0];
+    const eventDateStr = getEventDateKey(event);
+    if (!eventDateStr) return;
     if (!monthEvents[eventDateStr]) {
       monthEvents[eventDateStr] = [];
     }
@@ -139,8 +159,8 @@ function isToday(date: Date | null) {
         <div v-if="day" class="text-right text-xs font-semibold" :class="isToday(day) ? 'text-primary' : 'text-card-foreground'">
           {{ day.getDate() }}
         </div>
-        <div v-if="day && filteredEventsByMonth[day.toISOString().split('T')[0]]" class="space-y-0.5 text-xs">
-          <p v-for="event in filteredEventsByMonth[day.toISOString().split('T')[0]]" :key="event.id"
+        <div v-if="day && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
+          <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="event.id"
              class="month-event-chip truncate rounded-sm px-1 py-0.5 text-card-foreground"
           >
             {{ formatEventTime(event.start.dateTime) }} {{ event.summary }}

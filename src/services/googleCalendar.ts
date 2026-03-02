@@ -33,29 +33,41 @@ export async function createCalendarEvent(accessToken: string, event: CalendarEv
 }
 
 export async function getUpcomingEvents(accessToken: string, timeMin: string, timeMax: string) {
-  const params = new URLSearchParams({
-    timeMin,
-    timeMax,
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    maxResults: '250', // Increased limit for broader views (week/month)
-  });
+  const allEvents: any[] = []
+  let pageToken: string | undefined
 
-  const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events?${params.toString()}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
+  do {
+    const params = new URLSearchParams({
+      timeMin,
+      timeMax,
+      singleEvents: 'true',
+      orderBy: 'startTime',
+      maxResults: '2500',
+    })
 
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('Failed to fetch events:', error);
-    throw new Error(`Failed to fetch events: ${error.error.message}`);
-  }
+    if (pageToken) {
+      params.set('pageToken', pageToken)
+    }
 
-  const data = await response.json();
-  return data.items || [];
+    const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('Failed to fetch events:', error)
+      throw new Error(`Failed to fetch events: ${error.error.message}`)
+    }
+
+    const data = await response.json()
+    allEvents.push(...(data.items || []))
+    pageToken = data.nextPageToken
+  } while (pageToken)
+
+  return allEvents
 }
 
 export async function deleteCalendarEvent(accessToken: string, eventId: string) {

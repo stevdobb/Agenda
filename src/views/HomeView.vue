@@ -505,26 +505,6 @@ function handleOpenSettings() {
 
 
         <div v-if="authStore.isLoggedIn" class="mt-6 border-t border-border/70 pt-6">
-        <!-- Todo List Section -->
-        <div v-if="todoStore.todos.length > 0" class="mb-8">
-          <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
-            <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
-            My Todos
-          </h2>
-          <ul class="space-y-2">
-            <li v-for="todo in todoStore.todos" :key="todo.id"
-                :class="['todo-row flex items-center justify-between space-x-3 rounded-md border p-3', todo.completed ? 'todo-row-completed line-through' : '']">
-              <div class="flex items-center space-x-3">
-                <input type="checkbox" :checked="todo.completed" @change="todoStore.toggleTodo(todo.id)" class="form-checkbox h-5 w-5 text-blue-600">
-                <span class="font-medium text-card-foreground">{{ todo.content }}</span>
-              </div>
-              <button @click="todoStore.removeTodo(todo.id)" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                <TrashIcon class="h-5 w-5" />
-              </button>
-            </li>
-          </ul>
-        </div>
-        
         <h2 class="mb-4 text-xl font-semibold text-card-foreground">Create a new event</h2>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
@@ -605,6 +585,26 @@ function handleOpenSettings() {
         <!-- Month View -->
         <div v-if="currentView === 'month' && authStore.isLoggedIn" class="mt-8">
           <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" @dayClicked="handleMonthDayClick" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
+        </div>
+
+        <!-- Todo List Section -->
+        <div v-if="todoStore.todos.length > 0" class="mt-8 border-t border-border/70 pt-6">
+          <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
+            <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
+            My Todos
+          </h2>
+          <ul class="space-y-2">
+            <li v-for="todo in todoStore.todos" :key="todo.id"
+                :class="['todo-row flex items-center justify-between space-x-3 rounded-md border p-3', todo.completed ? 'todo-row-completed line-through' : '']">
+              <div class="flex items-center space-x-3">
+                <input type="checkbox" :checked="todo.completed" @change="todoStore.toggleTodo(todo.id)" class="form-checkbox h-5 w-5 text-blue-600">
+                <span class="font-medium text-card-foreground">{{ todo.content }}</span>
+              </div>
+              <button @click="todoStore.removeTodo(todo.id)" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                <TrashIcon class="h-5 w-5" />
+              </button>
+            </li>
+          </ul>
         </div>
       </div>
         <div v-else class="py-12 text-center">
@@ -694,5 +694,9 @@ function handleOpenSettings() {
   border-color: hsl(var(--destructive) / 0.55);
   background-color: hsl(var(--destructive) / 0.2);
   color: hsl(var(--card-foreground));
+}
+
+.feedback-alert.event-row-today {
+  color: #ffffff;
 }
 </style>
