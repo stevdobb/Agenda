@@ -150,7 +150,7 @@ function isToday(date: Date | null) {
         v-for="(day, index) in calendarDays"
         :key="index"
         :class="[
-          'day-cell relative h-32 overflow-hidden rounded-md border p-1',
+          'day-cell relative rounded-md border p-1',
           day ? 'cursor-pointer border-border/70' : 'day-cell-empty border-border/50',
           isToday(day) ? 'day-cell-today border-primary/70' : ''
         ]"
@@ -173,6 +173,7 @@ function isToday(date: Date | null) {
 
 <style scoped>
 .day-cell {
+  min-height: 8rem;
   background-color: hsl(var(--background) / 0.2);
 }
 

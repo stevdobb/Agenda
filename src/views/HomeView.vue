@@ -504,7 +504,7 @@ function handleOpenSettings() {
       <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
 
 
-        <div v-if="authStore.isLoggedIn" class="mt-6 border-t border-border/70 pt-6">
+        <div v-if="authStore.isLoggedIn" class="mt-3">
         <h2 class="mb-4 text-xl font-semibold text-card-foreground">Create a new event</h2>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
