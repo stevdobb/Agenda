@@ -18,6 +18,8 @@ const todoStore = useTodoStore() // Instantiate Todo store
 const eventText = ref('')
 const isLoading = ref(false)
 const feedbackMessage = ref('')
+const feedbackTone = ref<'success' | 'error' | null>(null)
+const feedbackUseTodayStyle = ref(false)
 const showSettingsModal = ref(false) // State for settings modal
 const lastAddedEventId = ref<string | null>(null) // To highlight the last added event
 const currentView = ref<'list' | 'week' | 'month'>('list') // State for current view
@@ -35,7 +37,7 @@ watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as cons
   try {
     await ensureActiveAccessToken();
   } catch (error: any) {
-    feedbackMessage.value = `❌ Error: ${error.message}`;
+    setFeedbackError(`Error: ${error.message}`);
     return;
   }
 
@@ -177,6 +179,65 @@ function extractTimeFromInput(input: string) {
   return null;
 }
 
+function clearFeedback() {
+  feedbackMessage.value = ''
+  feedbackTone.value = null
+  feedbackUseTodayStyle.value = false
+}
+
+function setFeedbackSuccess(message: string, useTodayStyle = false) {
+  feedbackMessage.value = message
+  feedbackTone.value = 'success'
+  feedbackUseTodayStyle.value = useTodayStyle
+}
+
+function setFeedbackError(message: string) {
+  feedbackMessage.value = message
+  feedbackTone.value = 'error'
+  feedbackUseTodayStyle.value = false
+}
+
+function isSameLocalDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  )
+}
+
+function formatAddedTime(date: Date) {
+  if (authStore.is24HourFormat && date.getMinutes() === 0) {
+    return date.toLocaleTimeString(undefined, { hour: '2-digit', hour12: false })
+  }
+
+  return date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: !authStore.is24HourFormat,
+  })
+}
+
+function getCreatedEventFeedback(summary: string, startDate: Date) {
+  const formattedTime = formatAddedTime(startDate)
+  if (isSameLocalDay(startDate, new Date())) {
+    return {
+      message: `Added today at ${formattedTime}: "${summary}"`,
+      useTodayStyle: true,
+    }
+  }
+
+  const formattedDate = startDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  return {
+    message: `Added for ${formattedDate} at ${formattedTime}: "${summary}"`,
+    useTodayStyle: false,
+  }
+}
+
 const groupedEvents = computed(() => {
   const groups: { [key: string]: any[] } = {};
   authStore.upcomingEvents.forEach(event => {
@@ -242,7 +303,7 @@ async function createEvent() {
   if (!eventText.value.trim() || isLoading.value) return;
 
   isLoading.value = true;
-  feedbackMessage.value = '';
+  clearFeedback();
   lastAddedEventId.value = null; // Clear highlight on new action
 
   const input = eventText.value.trim();
@@ -252,10 +313,10 @@ async function createEvent() {
     const todoContent = input.substring(5).trim();
     if (todoContent) {
       todoStore.addTodo(todoContent);
-      feedbackMessage.value = `✅ Todo added: "${todoContent}"`;
+      setFeedbackSuccess(`Todo added: "${todoContent}"`);
       eventText.value = ''; // Clear input
     } else {
-      feedbackMessage.value = `❌ Error: Please provide content for the todo.`;
+      setFeedbackError('Error: Please provide content for the todo.');
     }
     isLoading.value = false;
     return; // Stop here if it was a todo
@@ -305,7 +366,7 @@ async function createEvent() {
 
     const activeAccount = await ensureActiveAccessToken();
     if (!activeAccount) {
-        feedbackMessage.value = `❌ Error: No active account found to create event.`;
+        setFeedbackError('Error: No active account found to create event.');
         isLoading.value = false;
         return;
     }
@@ -318,7 +379,8 @@ async function createEvent() {
 
     const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent); // Assuming this returns the created event
     lastAddedEventId.value = createdEvent.id; // Store the ID for highlighting
-    feedbackMessage.value = `✅ Successfully created event: "${summary}" on ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !authStore.is24HourFormat })}`;
+    const createdFeedback = getCreatedEventFeedback(summary, startDate)
+    setFeedbackSuccess(createdFeedback.message, createdFeedback.useTodayStyle)
     eventText.value = ''; // Clear input
     
     // Refresh according to the currently visible range to avoid data flicker in month/week views.
@@ -326,7 +388,7 @@ async function createEvent() {
     await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
 
   } catch (error: any) {
-    feedbackMessage.value = `❌ Error: ${error.message}`;
+    setFeedbackError(`Error: ${error.message}`);
     console.error(error);
   } finally {
     isLoading.value = false;
@@ -340,10 +402,10 @@ async function deleteEvent(eventId: string) {
   // }
 
   isLoading.value = true;
-  feedbackMessage.value = '';
+  clearFeedback();
 
   const activeAccount = await ensureActiveAccessToken().catch((error: any) => {
-    feedbackMessage.value = `❌ Error: ${error.message}`;
+    setFeedbackError(`Error: ${error.message}`);
     return null;
   });
   if (!activeAccount) {
@@ -353,12 +415,12 @@ async function deleteEvent(eventId: string) {
 
   try {
     await deleteCalendarEvent(activeAccount.accessToken, eventId);
-    feedbackMessage.value = '✅ Event successfully deleted.';
+    setFeedbackSuccess('Event successfully deleted.');
     // Refresh according to the currently visible range to avoid data flicker in month/week views.
     const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
     await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
   } catch (error: any) {
-    feedbackMessage.value = `❌ Error deleting event: ${error.message}`;
+    setFeedbackError(`Error deleting event: ${error.message}`);
     console.error(error);
   } finally {
     isLoading.value = false;
@@ -372,12 +434,12 @@ function handleMonthDayClick(date: Date) {
 
 async function manualFetchEvents() {
   if (!authStore.isLoggedIn) {
-    feedbackMessage.value = '❌ Please log in to refresh events.';
+    setFeedbackError('Please log in to refresh events.');
     return;
   }
 
   const activeAccount = await ensureActiveAccessToken().catch((error: any) => {
-    feedbackMessage.value = `❌ Error: ${error.message}`;
+    setFeedbackError(`Error: ${error.message}`);
     return null;
   });
   if (!activeAccount) {
@@ -386,7 +448,7 @@ async function manualFetchEvents() {
 
   const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value);
   authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
-  feedbackMessage.value = '✅ Events refreshed.';
+  setFeedbackSuccess('Events refreshed.');
 }
 
 function isEventToday(event: any): boolean {
@@ -405,7 +467,7 @@ function isEventToday(event: any): boolean {
 
 function handleLogin() {
   requestAccessToken().catch((error: any) => {
-    feedbackMessage.value = `❌ Error: ${error.message}`;
+    setFeedbackError(`Error: ${error.message}`);
   });
 }
 
@@ -486,7 +548,11 @@ function handleOpenSettings() {
             <PlusIcon v-else class="h-6 w-6" />
           </button>
         </div>
-        <div v-if="feedbackMessage" class="mt-4 text-sm" :class="feedbackMessage.includes('Error') ? 'text-red-200' : 'text-emerald-200'">
+        <div
+          v-if="feedbackMessage"
+          class="feedback-alert mt-4 rounded-md border px-3 py-2 text-sm"
+          :class="feedbackTone === 'error' ? 'feedback-alert-error' : feedbackUseTodayStyle ? 'event-row-today' : 'feedback-alert-success'"
+        >
           {{ feedbackMessage }}
         </div>
 
@@ -612,5 +678,21 @@ function handleOpenSettings() {
 .event-row-success {
   border-color: hsl(156 63% 42% / 0.7);
   background-color: hsl(156 63% 42% / 0.28);
+}
+
+.feedback-alert {
+  line-height: 1.4;
+}
+
+.feedback-alert-success {
+  border-color: hsl(156 63% 42% / 0.7);
+  background-color: hsl(156 63% 42% / 0.28);
+  color: hsl(var(--card-foreground));
+}
+
+.feedback-alert-error {
+  border-color: hsl(var(--destructive) / 0.55);
+  background-color: hsl(var(--destructive) / 0.2);
+  color: hsl(var(--card-foreground));
 }
 </style>

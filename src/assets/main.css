@@ -61,7 +61,42 @@
 @layer base {
   * {
     @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.75) hsl(var(--background) / 0.24);
   }
+
+  *::-webkit-scrollbar {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+
+  *::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: hsl(var(--background) / 0.26);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid hsl(var(--background) / 0.45);
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--primary) / 0.95),
+      hsl(var(--primary) / 0.68)
+    );
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--ring) / 0.95),
+      hsl(var(--primary) / 0.78)
+    );
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

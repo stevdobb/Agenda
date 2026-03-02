@@ -11,6 +11,12 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:currentDate'])
 
+function toLocalDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // Helper to format date and time
 function formatEventTime(dateTime: string) {
@@ -48,7 +54,7 @@ const weekDays = computed(() => {
 const filteredEventsByWeek = computed(() => {
   const weekEvents: { [key: string]: any[] } = {};
   weekDays.value.forEach(day => {
-    const dateKey = day.toISOString().split('T')[0];
+    const dateKey = toLocalDateKey(day);
     weekEvents[dateKey] = [];
   });
 
@@ -114,32 +120,43 @@ function isToday(date: Date) {
     </div>
 
     <!-- Week Days and Events -->
-    <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
-      <div
-        v-for="day in weekDays"
-        :key="day.toISOString()"
-        :class="[
-          'day-card rounded-md border p-3',
-          isToday(day) ? 'day-card-today border-primary/70' : 'border-border/70'
-        ]"
-      >
-        <h4 class="mb-2 text-center font-bold text-card-foreground">{{ day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }) }}</h4>
-        <div v-if="filteredEventsByWeek[day.toISOString().split('T')[0]] && filteredEventsByWeek[day.toISOString().split('T')[0]].length > 0">
-          <ul class="space-y-2">
-            <li v-for="event in filteredEventsByWeek[day.toISOString().split('T')[0]]" :key="event.id"
-                class="event-chip rounded-md p-1 text-sm"
-            >
-              <p class="font-medium text-card-foreground">{{ formatEventTime(event.start.dateTime) }} - {{ event.summary }}</p>
-            </li>
-          </ul>
+    <div class="week-days-scroll overflow-x-auto pb-2">
+      <div class="week-days-grid grid min-w-full gap-3">
+        <div
+          v-for="day in weekDays"
+          :key="day.toISOString()"
+          :class="[
+            'day-card rounded-md border p-2.5',
+            isToday(day) ? 'day-card-today border-primary/70' : 'border-border/70'
+          ]"
+        >
+          <h4 class="mb-2 text-center font-bold text-card-foreground">{{ day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }) }}</h4>
+          <div v-if="filteredEventsByWeek[toLocalDateKey(day)] && filteredEventsByWeek[toLocalDateKey(day)].length > 0">
+            <ul class="space-y-1.5">
+              <li
+                v-for="event in filteredEventsByWeek[toLocalDateKey(day)]"
+                :key="event.id"
+                class="event-chip rounded-md px-2 py-1.5 text-sm"
+              >
+                <p class="event-chip-time text-xs font-semibold text-muted-foreground">
+                  {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
+                </p>
+                <p class="event-chip-title font-semibold text-card-foreground">{{ event.summary }}</p>
+              </li>
+            </ul>
+          </div>
+          <div v-else class="pt-1 text-center text-xs text-muted-foreground">No events</div>
         </div>
-        <div v-else class="text-center text-sm text-muted-foreground">No events</div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.week-days-grid {
+  grid-template-columns: repeat(7, minmax(170px, 1fr));
+}
+
 .day-card {
   background-color: hsl(var(--background) / 0.2);
 }
@@ -153,7 +170,28 @@ function isToday(date: Date) {
   background-color: hsl(var(--secondary) / 0.45);
 }
 
+.event-chip-time {
+  line-height: 1.2;
+}
+
+.event-chip-title {
+  line-height: 1.3;
+  word-break: break-word;
+}
+
 .week-today-button {
   border: 1px solid hsl(var(--border) / 0.65);
+}
+
+@media (max-width: 1280px) {
+  .week-days-grid {
+    grid-template-columns: repeat(7, minmax(185px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .week-days-grid {
+    grid-template-columns: repeat(7, minmax(220px, 1fr));
+  }
 }
 </style>
