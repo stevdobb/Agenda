@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import { XMarkIcon } from '@heroicons/vue/24/solid'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -19,7 +20,14 @@ const emit = defineEmits(['confirm', 'cancel'])
 
 <template>
   <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <Card class="w-full max-w-md">
+    <Card class="relative w-full max-w-md">
+      <button
+        @click="emit('cancel')"
+        class="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-secondary/60 hover:text-foreground"
+        aria-label="Close modal"
+      >
+        <XMarkIcon class="h-5 w-5" />
+      </button>
       <CardHeader>
         <CardTitle>{{ title }}</CardTitle>
         <CardDescription>{{ description }}</CardDescription>

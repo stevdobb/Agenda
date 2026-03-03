@@ -8,7 +8,7 @@ import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
 import Litepicker from '@/components/Litepicker.vue'
 import TopMenu from '@/components/TopMenu.vue'
-import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
@@ -947,6 +947,13 @@ function handleOpenSettings() {
       </div>
       <div v-if="showEventModal && selectedEvent" class="event-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeEventModal">
         <div class="event-modal-card w-full max-w-lg rounded-lg border p-5 sm:p-6">
+          <button
+            @click="closeEventModal"
+            class="modal-close-button absolute right-3 top-3 rounded-full p-1 transition"
+            aria-label="Close edit modal"
+          >
+            <XMarkIcon class="h-5 w-5" />
+          </button>
           <h3 class="text-lg font-semibold text-card-foreground">Edit event</h3>
           <div class="mt-4 space-y-4">
             <div class="space-y-2">
@@ -1021,6 +1028,13 @@ function handleOpenSettings() {
       </div>
       <div v-if="showCreateHelpModal" class="event-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeCreateHelpModal">
         <div class="help-modal-card w-full max-w-2xl rounded-lg border p-5 sm:p-6">
+          <button
+            @click="closeCreateHelpModal"
+            class="modal-close-button absolute right-3 top-3 rounded-full p-1 transition"
+            aria-label="Close help modal"
+          >
+            <XMarkIcon class="h-5 w-5" />
+          </button>
           <h3 class="text-lg font-semibold text-card-foreground">Input help</h3>
           <p class="mt-3 text-sm text-muted-foreground">
             You can type natural language in the input field. Examples:
@@ -1141,6 +1155,7 @@ function handleOpenSettings() {
 }
 
 .event-modal-card {
+  position: relative;
   border-color: hsl(var(--border) / 0.6);
   background-color: hsl(var(--card) / 0.96);
   box-shadow: 0 16px 40px hsl(220 45% 8% / 0.45);
@@ -1179,8 +1194,18 @@ function handleOpenSettings() {
 }
 
 .help-modal-card {
+  position: relative;
   border-color: hsl(var(--border) / 0.6);
   background-color: hsl(var(--card) / 0.96);
   box-shadow: 0 16px 40px hsl(220 45% 8% / 0.45);
+}
+
+.modal-close-button {
+  color: hsl(var(--muted-foreground));
+}
+
+.modal-close-button:hover {
+  color: hsl(var(--card-foreground));
+  background-color: hsl(var(--secondary) / 0.45);
 }
 </style>
