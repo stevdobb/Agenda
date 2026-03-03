@@ -497,7 +497,7 @@ async function createEvent() {
       .replace(/\b(all[\s-]?day|hele\s+dag)\b/gi, '')
       .replace(/\s{2,}/g, ' ')
       .trim()
-    const parsedResults = chrono.parse(normalizedInput)
+    const parsedResults = chrono.parse(normalizedInput, new Date(), { forwardDate: true })
     const extractedTime = extractTimeFromInput(normalizedInput)
     const timeMatch = forceAllDay ? null : extractedTime
 
@@ -517,6 +517,10 @@ async function createEvent() {
         startDate = new Date();
         startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
         endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+        if (startDate.getTime() <= Date.now()) {
+          startDate.setDate(startDate.getDate() + 1)
+          endDate.setDate(endDate.getDate() + 1)
+        }
       } else {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
