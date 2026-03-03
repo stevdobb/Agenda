@@ -4,14 +4,14 @@ const CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3'
 interface CalendarEvent {
   summary: string;
   start: {
-    dateTime?: string;
-    date?: string;
-    timeZone?: string;
+    dateTime?: string | null;
+    date?: string | null;
+    timeZone?: string | null;
   };
   end: {
-    dateTime?: string;
-    date?: string;
-    timeZone?: string;
+    dateTime?: string | null;
+    date?: string | null;
+    timeZone?: string | null;
   };
 }
 

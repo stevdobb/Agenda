@@ -8,7 +8,7 @@ import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
 import Litepicker from '@/components/Litepicker.vue'
 import TopMenu from '@/components/TopMenu.vue'
-import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
@@ -27,6 +27,7 @@ const currentView = ref<'list' | 'week' | 'month'>('list') // State for current 
 const currentDate = ref(new Date()) // State for current date (for week/month view navigation)
 const tokenRefreshBufferMs = 30 * 1000
 const showEventModal = ref(false)
+const showCreateHelpModal = ref(false)
 const selectedEvent = ref<GoogleCalendarEvent | null>(null)
 const editSummary = ref('')
 const editDate = ref('')
@@ -286,6 +287,26 @@ function getCreatedEventFeedback(summary: string, startDate: Date) {
   }
 }
 
+function getCreatedAllDayEventFeedback(summary: string, startDate: Date) {
+  if (isSameLocalDay(startDate, new Date())) {
+    return {
+      message: `Added all-day for today: "${summary}"`,
+      useTodayStyle: true,
+    }
+  }
+
+  const formattedDate = startDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  return {
+    message: `Added all-day for ${formattedDate}: "${summary}"`,
+    useTodayStyle: false,
+  }
+}
+
 function toLocalDateKey(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -334,6 +355,10 @@ function getEventDateKey(event: GoogleCalendarEvent) {
   return ''
 }
 
+function isAllDayEvent(event: GoogleCalendarEvent) {
+  return Boolean(event.start.date && !event.start.dateTime)
+}
+
 function openEventModal(event: GoogleCalendarEvent) {
   selectedEvent.value = event
   editSummary.value = event.summary ?? ''
@@ -363,6 +388,10 @@ function dismissEventModal() {
 function closeEventModal() {
   if (isLoading.value) return
   dismissEventModal()
+}
+
+function closeCreateHelpModal() {
+  showCreateHelpModal.value = false
 }
 
 async function refreshVisibleEvents() {
@@ -395,6 +424,13 @@ const groupedEvents = computed(() => {
 
   sortedKeys.forEach(dateKey => {
     const sortedEvents = groups[dateKey].sort((a, b) => {
+      const isAllDayA = Boolean(a.start.date && !a.start.dateTime)
+      const isAllDayB = Boolean(b.start.date && !b.start.dateTime)
+
+      if (isAllDayA !== isAllDayB) {
+        return isAllDayA ? -1 : 1
+      }
+
       const timeA = a.start.dateTime ? new Date(a.start.dateTime).getTime() : 0;
       const timeB = b.start.dateTime ? new Date(b.start.dateTime).getTime() : 0;
       return timeA - timeB;
@@ -456,28 +492,44 @@ async function createEvent() {
 
   // Otherwise, proceed as a calendar event
   try {
-    const parsedResults = chrono.parse(input); // Use 'input' instead of 'eventText.value'
-    const timeMatch = extractTimeFromInput(input);
+    const forceAllDay = /\b(all[\s-]?day|hele\s+dag)\b/i.test(input)
+    const normalizedInput = input
+      .replace(/\b(all[\s-]?day|hele\s+dag)\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+    const parsedResults = chrono.parse(normalizedInput)
+    const extractedTime = extractTimeFromInput(normalizedInput)
+    const timeMatch = forceAllDay ? null : extractedTime
 
     let summary = '';
-    let startDate: Date;
-    let endDate: Date;
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    let allDayStartDate: string | null = null;
+    let allDayEndDate: string | null = null;
 
     if (parsedResults.length === 0) {
-      summary = timeMatch?.summary ?? input;
+      summary = extractedTime?.summary ?? normalizedInput;
       if (!summary) {
         throw new Error("Please provide a title for the event.");
       }
-      startDate = new Date();
-      if (timeMatch) {
+
+      if (!forceAllDay && timeMatch) {
+        startDate = new Date();
         startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
+        endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+      } else {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        allDayStartDate = toLocalDateKey(today)
+        allDayEndDate = toLocalDateKey(tomorrow)
       }
-      endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
     } else {
       const result = parsedResults[0];
-      summary = input.replace(result.text, '').trim(); // Use 'input'
-      if (timeMatch) {
-        summary = summary.replace(timeMatch.matchText, '').replace(/\s{2,}/g, ' ').trim();
+      summary = normalizedInput.replace(result.text, '').trim();
+      if (extractedTime) {
+        summary = summary.replace(extractedTime.matchText, '').replace(/\s{2,}/g, ' ').trim();
       }
       summary = summary.replace(/\b(at|om)\b\s*$/i, '').trim();
 
@@ -486,11 +538,27 @@ async function createEvent() {
       }
 
       startDate = result.start.date();
-      endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
-      if (timeMatch && !result.start.isCertain('hour') && !result.start.isCertain('minute')) {
-        startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
-        if (!result.end || (!result.end.isCertain('hour') && !result.end.isCertain('minute'))) {
-          endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+      if (forceAllDay) {
+        const allDayStart = new Date(startDate)
+        allDayStart.setHours(0, 0, 0, 0)
+
+        const inclusiveEnd = result.end ? result.end.date() : new Date(allDayStart)
+        inclusiveEnd.setHours(0, 0, 0, 0)
+        if (inclusiveEnd.getTime() < allDayStart.getTime()) {
+          inclusiveEnd.setTime(allDayStart.getTime())
+        }
+
+        const exclusiveEnd = new Date(inclusiveEnd)
+        exclusiveEnd.setDate(exclusiveEnd.getDate() + 1)
+        allDayStartDate = toLocalDateKey(allDayStart)
+        allDayEndDate = toLocalDateKey(exclusiveEnd)
+      } else {
+        endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
+        if (timeMatch && !result.start.isCertain('hour') && !result.start.isCertain('minute')) {
+          startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
+          if (!result.end || (!result.end.isCertain('hour') && !result.end.isCertain('minute'))) {
+            endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+          }
         }
       }
     }
@@ -503,15 +571,23 @@ async function createEvent() {
         return;
     }
 
-    const calendarEvent = {
-      summary: summary,
-      start: { dateTime: startDate.toISOString(), timeZone: timeZone },
-      end: { dateTime: endDate.toISOString(), timeZone: timeZone },
-    };
+    const calendarEvent = allDayStartDate && allDayEndDate
+      ? {
+          summary,
+          start: { date: allDayStartDate },
+          end: { date: allDayEndDate },
+        }
+      : {
+          summary,
+          start: { dateTime: startDate!.toISOString(), timeZone },
+          end: { dateTime: endDate!.toISOString(), timeZone },
+        };
 
     const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent); // Assuming this returns the created event
     lastAddedEventId.value = createdEvent.id; // Store the ID for highlighting
-    const createdFeedback = getCreatedEventFeedback(summary, startDate)
+    const createdFeedback = allDayStartDate
+      ? getCreatedAllDayEventFeedback(summary, parseDateKey(allDayStartDate) ?? new Date())
+      : getCreatedEventFeedback(summary, startDate!)
     setFeedbackSuccess(createdFeedback.message, createdFeedback.useTodayStyle)
     eventText.value = ''; // Clear input
     
@@ -555,8 +631,8 @@ async function saveSelectedEvent() {
   try {
     let payload: {
       summary: string
-      start: { dateTime?: string; date?: string; timeZone?: string }
-      end: { dateTime?: string; date?: string; timeZone?: string }
+      start: { dateTime?: string | null; date?: string | null; timeZone?: string | null }
+      end: { dateTime?: string | null; date?: string | null; timeZone?: string | null }
     }
 
     if (editIsAllDay.value) {
@@ -569,8 +645,8 @@ async function saveSelectedEvent() {
       localExclusiveEndDate.setDate(localExclusiveEndDate.getDate() + 1)
       payload = {
         summary: trimmedSummary,
-        start: { date: editDate.value },
-        end: { date: toLocalDateKey(localExclusiveEndDate) },
+        start: { date: editDate.value, dateTime: null, timeZone: null },
+        end: { date: toLocalDateKey(localExclusiveEndDate), dateTime: null, timeZone: null },
       }
     } else {
       const localDate = parseDateKey(editDate.value)
@@ -593,8 +669,8 @@ async function saveSelectedEvent() {
       const timeZone = eventToUpdate.start.timeZone || eventToUpdate.end.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
       payload = {
         summary: trimmedSummary,
-        start: { dateTime: startDateTime.toISOString(), timeZone },
-        end: { dateTime: endDateTime.toISOString(), timeZone },
+        start: { dateTime: startDateTime.toISOString(), timeZone, date: null },
+        end: { dateTime: endDateTime.toISOString(), timeZone, date: null },
       }
     }
 
@@ -725,7 +801,17 @@ function handleOpenSettings() {
 
 
         <div v-if="authStore.isLoggedIn" class="mt-3">
-        <h2 class="mb-4 text-xl font-semibold text-card-foreground">Create a new event</h2>
+        <div class="mb-4 flex items-center gap-2">
+          <h2 class="text-xl font-semibold text-card-foreground">Create a new event</h2>
+          <button
+            @click="showCreateHelpModal = true"
+            class="help-icon-button rounded-full p-1 transition"
+            aria-label="Show input help"
+            title="Show input help"
+          >
+            <QuestionMarkCircleIcon class="h-5 w-5" />
+          </button>
+        </div>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
           autofocus
@@ -773,6 +859,7 @@ function handleOpenSettings() {
                   :key="event.id"
                   :class="[
                     'event-row flex cursor-pointer items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200',
+                    isAllDayEvent(event) ? 'event-row-all-day' : '',
                     event.id === lastAddedEventId
                       ? 'event-row-success shadow'
                       : isEventToday(event)
@@ -782,7 +869,10 @@ function handleOpenSettings() {
                   @click="openEventModal(event)"
                 >
                   <div class="flex items-start space-x-2">
-                    <p class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
+                    <p v-if="isAllDayEvent(event)" class="event-all-day-label flex-shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">
+                      All day
+                    </p>
+                    <p v-else class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
                       {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
                     </p>
                     <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
@@ -925,6 +1015,33 @@ function handleOpenSettings() {
           </div>
         </div>
       </div>
+      <div v-if="showCreateHelpModal" class="event-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeCreateHelpModal">
+        <div class="help-modal-card w-full max-w-2xl rounded-lg border p-5 sm:p-6">
+          <h3 class="text-lg font-semibold text-card-foreground">Input help</h3>
+          <p class="mt-3 text-sm text-muted-foreground">
+            You can type natural language in the input field. Examples:
+          </p>
+          <ul class="mt-3 space-y-2 text-sm text-card-foreground">
+            <li><span class="font-semibold">Simple all-day:</span> <code>testitem</code> (today, all day)</li>
+            <li><span class="font-semibold">Force all-day:</span> <code>testitem all day</code> or <code>testitem hele dag</code></li>
+            <li><span class="font-semibold">Date + time:</span> <code>meeting tomorrow at 14:00</code></li>
+            <li><span class="font-semibold">Dutch time:</span> <code>dokter vrijdag om 9u30</code></li>
+            <li><span class="font-semibold">Specific date:</span> <code>birthday party 12/04 19:00</code></li>
+            <li><span class="font-semibold">Todo:</span> <code>todo melk kopen</code></li>
+          </ul>
+          <p class="mt-4 text-sm text-muted-foreground">
+            Tip: if no time is given but a date is recognized, the event is created with a default time. Use <code>all day</code> to force an all-day event.
+          </p>
+          <div class="mt-6 flex justify-end">
+            <button
+              @click="closeCreateHelpModal"
+              class="event-modal-cancel rounded-md border px-4 py-2 text-sm font-medium transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
       <!-- Settings Modal -->
       <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
     </div>
@@ -985,6 +1102,16 @@ function handleOpenSettings() {
   background-color: hsl(156 63% 42% / 0.28);
 }
 
+.event-row-all-day {
+  border-style: dashed;
+}
+
+.event-all-day-label {
+  border: 1px solid hsl(var(--primary) / 0.45);
+  background-color: hsl(var(--primary) / 0.18);
+  color: #ffffff;
+}
+
 .feedback-alert {
   line-height: 1.4;
 }
@@ -1025,11 +1152,31 @@ function handleOpenSettings() {
 }
 
 .event-modal-delete {
+  background-color: hsl(var(--destructive));
   border-color: hsl(var(--destructive) / 0.5);
-  color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
 }
 
 .event-modal-delete:hover {
-  background-color: hsl(var(--destructive) / 0.14);
+  filter: brightness(0.92);
+}
+
+.event-modal-card :deep(#event-edit-date) {
+  color: #ffffff;
+}
+
+.help-icon-button {
+  color: hsl(var(--muted-foreground));
+}
+
+.help-icon-button:hover {
+  color: hsl(var(--card-foreground));
+  background-color: hsl(var(--secondary) / 0.45);
+}
+
+.help-modal-card {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--card) / 0.96);
+  box-shadow: 0 16px 40px hsl(220 45% 8% / 0.45);
 }
 </style>
