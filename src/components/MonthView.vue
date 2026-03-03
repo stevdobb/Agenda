@@ -9,7 +9,7 @@ const props = defineProps<{
   is24HourFormat: boolean
 }>()
 
-const emit = defineEmits(['update:currentDate', 'dayClicked'])
+const emit = defineEmits(['update:currentDate', 'dayClicked', 'eventClicked'])
 
 function toLocalDateKey(date: Date) {
   const year = date.getFullYear()
@@ -161,7 +161,8 @@ function isToday(date: Date | null) {
         </div>
         <div v-if="day && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
           <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="event.id"
-             class="month-event-chip truncate rounded-sm px-1 py-0.5 text-card-foreground"
+             class="month-event-chip cursor-pointer truncate rounded-sm px-1 py-0.5 text-card-foreground transition hover:border-primary/70"
+             @click.stop="emit('eventClicked', event)"
           >
             {{ formatEventTime(event.start.dateTime) }} {{ event.summary }}
           </p>

@@ -4,12 +4,14 @@ const CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3'
 interface CalendarEvent {
   summary: string;
   start: {
-    dateTime: string;
-    timeZone: string;
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
   };
   end: {
-    dateTime: string;
-    timeZone: string;
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
   };
 }
 
@@ -86,4 +88,23 @@ export async function deleteCalendarEvent(accessToken: string, eventId: string) 
 
   // DELETE requests to this endpoint return an empty 204 response on success
   return true;
+}
+
+export async function updateCalendarEvent(accessToken: string, eventId: string, event: CalendarEvent) {
+  const response = await fetch(`${CALENDAR_API_URL}/calendars/primary/events/${eventId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(event),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    console.error('Failed to update event:', error)
+    throw new Error(`Failed to update event: ${error.error.message}`)
+  }
+
+  return await response.json()
 }

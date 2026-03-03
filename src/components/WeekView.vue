@@ -9,7 +9,7 @@ const props = defineProps<{
   is24HourFormat: boolean
 }>()
 
-const emit = defineEmits(['update:currentDate'])
+const emit = defineEmits(['update:currentDate', 'eventClicked'])
 
 function toLocalDateKey(date: Date) {
   const year = date.getFullYear()
@@ -136,7 +136,8 @@ function isToday(date: Date) {
               <li
                 v-for="event in filteredEventsByWeek[toLocalDateKey(day)]"
                 :key="event.id"
-                class="event-chip rounded-md px-2 py-1.5 text-sm"
+                class="event-chip cursor-pointer rounded-md px-2 py-1.5 text-sm transition hover:border-primary/70"
+                @click="emit('eventClicked', event)"
               >
                 <p class="event-chip-time text-xs font-semibold text-muted-foreground">
                   {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}

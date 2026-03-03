@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
 import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
 import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
+import Litepicker from '@/components/Litepicker.vue'
 import TopMenu from '@/components/TopMenu.vue'
 import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import chrono from '@/services/customChrono'
-import { createCalendarEvent, deleteCalendarEvent } from '@/services/googleCalendar'
+import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
 
 const router = useRouter()
@@ -25,10 +26,44 @@ const lastAddedEventId = ref<string | null>(null) // To highlight the last added
 const currentView = ref<'list' | 'week' | 'month'>('list') // State for current view
 const currentDate = ref(new Date()) // State for current date (for week/month view navigation)
 const tokenRefreshBufferMs = 30 * 1000
+const showEventModal = ref(false)
+const selectedEvent = ref<GoogleCalendarEvent | null>(null)
+const editSummary = ref('')
+const editDate = ref('')
+const editStartTime = ref('09:00')
+const editEndTime = ref('10:00')
+const editIsAllDay = ref(false)
+const singleDateLitepickerOptions = {
+  singleMode: true,
+  autoApply: true,
+  format: 'YYYY-MM-DD',
+  lang: 'nl-NL',
+}
 
-onMounted(() => {
-  // Initial fetch is now handled by watch with { immediate: true }
-})
+interface GoogleCalendarEvent {
+  id: string
+  summary?: string
+  accountId?: string
+  start: {
+    dateTime?: string
+    date?: string
+    timeZone?: string
+  }
+  end: {
+    dateTime?: string
+    date?: string
+    timeZone?: string
+  }
+}
+
+interface GoogleAccount {
+  id: string
+  accessToken: string
+  expiresAt: number
+  user?: {
+    email?: string
+  }
+}
 
 // Fetch events whenever auth/view/date changes and user is logged in.
 watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as const, async ([isLoggedIn, newDate, newView]) => {
@@ -77,31 +112,44 @@ function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
   return { fetchStart, fetchEnd };
 }
 
-function getActiveAccount() {
-  return authStore.accounts.find((account) => account.id === authStore.activeAccountId)
+function getAccountById(accountId: string | null) {
+  if (!accountId) return null
+  return (authStore.accounts as GoogleAccount[]).find((account) => account.id === accountId) ?? null
+}
+
+async function ensureAccessTokenForAccount(accountId: string | null) {
+  const initialAccount = getAccountById(accountId)
+  if (!initialAccount) {
+    throw new Error('No account found for this event.')
+  }
+
+  if (initialAccount.expiresAt > Date.now() + tokenRefreshBufferMs) {
+    return initialAccount
+  }
+
+  const accountEmail = initialAccount.user?.email
+  await requestAccessToken({
+    prompt: '',
+    hint: accountEmail,
+  })
+
+  const refreshedById = getAccountById(initialAccount.id)
+  if (refreshedById && refreshedById.expiresAt > Date.now() + 5000) {
+    return refreshedById
+  }
+
+  const refreshedByEmail = (authStore.accounts as GoogleAccount[]).find(
+    (account) => account.user?.email && account.user.email === accountEmail && account.expiresAt > Date.now() + 5000,
+  )
+  if (refreshedByEmail) {
+    return refreshedByEmail
+  }
+
+  throw new Error('Could not refresh Google session. Please log in again.')
 }
 
 async function ensureActiveAccessToken() {
-  const currentAccount = getActiveAccount()
-  if (!currentAccount) {
-    throw new Error('No active account found.')
-  }
-
-  if (currentAccount.expiresAt > Date.now() + tokenRefreshBufferMs) {
-    return currentAccount
-  }
-
-  await requestAccessToken({
-    prompt: '',
-    hint: currentAccount.user?.email,
-  })
-
-  const refreshedAccount = getActiveAccount()
-  if (!refreshedAccount || refreshedAccount.expiresAt <= Date.now() + 5000) {
-    throw new Error('Could not refresh Google session. Please log in again.')
-  }
-
-  return refreshedAccount
+  return ensureAccessTokenForAccount(authStore.activeAccountId)
 }
 
 
@@ -238,11 +286,95 @@ function getCreatedEventFeedback(summary: string, startDate: Date) {
   }
 }
 
+function toLocalDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function formatTimeForInput(date: Date) {
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${hour}:${minute}`
+}
+
+function parseDateKey(dateKey: string) {
+  const parts = dateKey.split('-').map((part) => parseInt(part, 10))
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return null
+  }
+
+  const [year, month, day] = parts
+  return new Date(year, month - 1, day)
+}
+
+function parseTimeValue(timeValue: string) {
+  const match = timeValue.match(/^(\d{2}):(\d{2})$/)
+  if (!match) return null
+
+  const hour = parseInt(match[1], 10)
+  const minute = parseInt(match[2], 10)
+  if (Number.isNaN(hour) || Number.isNaN(minute) || hour > 23 || minute > 59) {
+    return null
+  }
+
+  return { hour, minute }
+}
+
+function getEventDateKey(event: GoogleCalendarEvent) {
+  if (event.start.date) {
+    return event.start.date
+  }
+
+  if (event.start.dateTime) {
+    return toLocalDateKey(new Date(event.start.dateTime))
+  }
+
+  return ''
+}
+
+function openEventModal(event: GoogleCalendarEvent) {
+  selectedEvent.value = event
+  editSummary.value = event.summary ?? ''
+
+  if (event.start.dateTime) {
+    const start = new Date(event.start.dateTime)
+    const end = event.end.dateTime ? new Date(event.end.dateTime) : new Date(start.getTime() + 60 * 60 * 1000)
+    editDate.value = toLocalDateKey(start)
+    editStartTime.value = formatTimeForInput(start)
+    editEndTime.value = formatTimeForInput(end)
+    editIsAllDay.value = false
+  } else {
+    editDate.value = event.start.date || toLocalDateKey(new Date())
+    editStartTime.value = '09:00'
+    editEndTime.value = '10:00'
+    editIsAllDay.value = true
+  }
+
+  showEventModal.value = true
+}
+
+function dismissEventModal() {
+  showEventModal.value = false
+  selectedEvent.value = null
+}
+
+function closeEventModal() {
+  if (isLoading.value) return
+  dismissEventModal()
+}
+
+async function refreshVisibleEvents() {
+  const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
+  await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true)
+}
+
 const groupedEvents = computed(() => {
   const groups: { [key: string]: any[] } = {};
-  authStore.upcomingEvents.forEach(event => {
-    // Use start.date for all-day events, start.dateTime for timed events
-    const dateKey = (event.start.date || event.start.dateTime).split('T')[0]; // YYYY-MM-DD
+  (authStore.upcomingEvents as GoogleCalendarEvent[]).forEach((event) => {
+    const dateKey = getEventDateKey(event)
+    if (!dateKey) return
     if (!groups[dateKey]) {
       groups[dateKey] = [];
     }
@@ -383,9 +515,7 @@ async function createEvent() {
     setFeedbackSuccess(createdFeedback.message, createdFeedback.useTodayStyle)
     eventText.value = ''; // Clear input
     
-    // Refresh according to the currently visible range to avoid data flicker in month/week views.
-    const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
-    await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
+    await refreshVisibleEvents()
 
   } catch (error: any) {
     setFeedbackError(`Error: ${error.message}`);
@@ -395,36 +525,125 @@ async function createEvent() {
   }
 }
 
-async function deleteEvent(eventId: string) {
-  // Optional: Ask for confirmation
-  // if (!confirm('Are you sure you want to delete this event?')) {
-  //   return;
-  // }
+async function saveSelectedEvent() {
+  if (!selectedEvent.value || isLoading.value) return
+
+  const trimmedSummary = editSummary.value.trim()
+  if (!trimmedSummary) {
+    setFeedbackError('Error: Please provide a title for the event.')
+    return
+  }
+  if (!editDate.value) {
+    setFeedbackError('Error: Please select a date.')
+    return
+  }
 
   isLoading.value = true;
   clearFeedback();
 
-  const activeAccount = await ensureActiveAccessToken().catch((error: any) => {
+  const eventToUpdate = selectedEvent.value
+  const eventAccountId = eventToUpdate.accountId ?? authStore.activeAccountId
+  const account = await ensureAccessTokenForAccount(eventAccountId).catch((error: any) => {
     setFeedbackError(`Error: ${error.message}`);
     return null;
   });
-  if (!activeAccount) {
+  if (!account) {
     isLoading.value = false;
     return;
   }
 
   try {
-    await deleteCalendarEvent(activeAccount.accessToken, eventId);
-    setFeedbackSuccess('Event successfully deleted.');
-    // Refresh according to the currently visible range to avoid data flicker in month/week views.
-    const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
-    await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
+    let payload: {
+      summary: string
+      start: { dateTime?: string; date?: string; timeZone?: string }
+      end: { dateTime?: string; date?: string; timeZone?: string }
+    }
+
+    if (editIsAllDay.value) {
+      const localStartDate = parseDateKey(editDate.value)
+      if (!localStartDate) {
+        throw new Error('Invalid selected date.')
+      }
+
+      const localExclusiveEndDate = new Date(localStartDate)
+      localExclusiveEndDate.setDate(localExclusiveEndDate.getDate() + 1)
+      payload = {
+        summary: trimmedSummary,
+        start: { date: editDate.value },
+        end: { date: toLocalDateKey(localExclusiveEndDate) },
+      }
+    } else {
+      const localDate = parseDateKey(editDate.value)
+      const startTime = parseTimeValue(editStartTime.value)
+      const endTime = parseTimeValue(editEndTime.value)
+
+      if (!localDate || !startTime || !endTime) {
+        throw new Error('Please provide a valid date and time.')
+      }
+
+      const startDateTime = new Date(localDate)
+      startDateTime.setHours(startTime.hour, startTime.minute, 0, 0)
+      const endDateTime = new Date(localDate)
+      endDateTime.setHours(endTime.hour, endTime.minute, 0, 0)
+
+      if (endDateTime.getTime() <= startDateTime.getTime()) {
+        throw new Error('End time must be after start time.')
+      }
+
+      const timeZone = eventToUpdate.start.timeZone || eventToUpdate.end.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+      payload = {
+        summary: trimmedSummary,
+        start: { dateTime: startDateTime.toISOString(), timeZone },
+        end: { dateTime: endDateTime.toISOString(), timeZone },
+      }
+    }
+
+    await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload)
+    setFeedbackSuccess('Event successfully updated.')
+    dismissEventModal()
+    await refreshVisibleEvents()
   } catch (error: any) {
-    setFeedbackError(`Error deleting event: ${error.message}`);
+    setFeedbackError(`Error updating event: ${error.message}`);
     console.error(error);
   } finally {
     isLoading.value = false;
   }
+}
+
+async function deleteEvent(event: GoogleCalendarEvent) {
+  if (isLoading.value) return
+
+  isLoading.value = true
+  clearFeedback()
+
+  const eventAccountId = event.accountId ?? authStore.activeAccountId
+  const account = await ensureAccessTokenForAccount(eventAccountId).catch((error: any) => {
+    setFeedbackError(`Error: ${error.message}`)
+    return null
+  })
+  if (!account) {
+    isLoading.value = false
+    return
+  }
+
+  try {
+    await deleteCalendarEvent(account.accessToken, event.id)
+    setFeedbackSuccess('Event successfully deleted.')
+    if (selectedEvent.value?.id === event.id) {
+      dismissEventModal()
+    }
+    await refreshVisibleEvents()
+  } catch (error: any) {
+    setFeedbackError(`Error deleting event: ${error.message}`)
+    console.error(error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function deleteSelectedEvent() {
+  if (!selectedEvent.value) return
+  await deleteEvent(selectedEvent.value)
 }
 
 function handleMonthDayClick(date: Date) {
@@ -451,8 +670,9 @@ async function manualFetchEvents() {
   setFeedbackSuccess('Events refreshed.');
 }
 
-function isEventToday(event: any): boolean {
-  const eventDateStr = (event.start.date || event.start.dateTime).split('T')[0];
+function isEventToday(event: GoogleCalendarEvent): boolean {
+  const eventDateStr = getEventDateKey(event)
+  if (!eventDateStr) return false
   
   // Robustly parse YYYY-MM-DD as local date
   const parts = eventDateStr.split('-').map((part: string) => parseInt(part, 10));
@@ -552,13 +772,14 @@ function handleOpenSettings() {
                   v-for="event in dayGroup.events"
                   :key="event.id"
                   :class="[
-                    'event-row flex items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200',
+                    'event-row flex cursor-pointer items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200',
                     event.id === lastAddedEventId
                       ? 'event-row-success shadow'
                       : isEventToday(event)
                         ? 'event-row-today'
                         : 'event-row-default'
                   ]"
+                  @click="openEventModal(event)"
                 >
                   <div class="flex items-start space-x-2">
                     <p class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
@@ -566,9 +787,6 @@ function handleOpenSettings() {
                     </p>
                     <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
                   </div>
-                  <button @click="deleteEvent(event.id)" :disabled="isLoading" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" aria-label="Delete event">
-                    <TrashIcon class="h-5 w-5" />
-                  </button>
                 </li>
               </ul>
             </div>
@@ -579,12 +797,25 @@ function handleOpenSettings() {
         </div>
         <!-- Week View -->
         <div v-if="currentView === 'week' && authStore.isLoggedIn" class="mt-8">
-          <WeekView :currentDate="currentDate" @update:currentDate="currentDate = $event" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
+          <WeekView
+            :currentDate="currentDate"
+            @update:currentDate="currentDate = $event"
+            @eventClicked="openEventModal"
+            :events="authStore.upcomingEvents"
+            :is24HourFormat="authStore.is24HourFormat"
+          />
         </div>
 
         <!-- Month View -->
         <div v-if="currentView === 'month' && authStore.isLoggedIn" class="mt-8">
-          <MonthView :currentDate="currentDate" @update:currentDate="currentDate = $event" @dayClicked="handleMonthDayClick" :events="authStore.upcomingEvents" :is24HourFormat="authStore.is24HourFormat" />
+          <MonthView
+            :currentDate="currentDate"
+            @update:currentDate="currentDate = $event"
+            @dayClicked="handleMonthDayClick"
+            @eventClicked="openEventModal"
+            :events="authStore.upcomingEvents"
+            :is24HourFormat="authStore.is24HourFormat"
+          />
         </div>
 
         <!-- Todo List Section -->
@@ -618,6 +849,80 @@ function handleOpenSettings() {
         >
           Login with Google
         </button>
+        </div>
+      </div>
+      <div v-if="showEventModal && selectedEvent" class="event-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeEventModal">
+        <div class="event-modal-card w-full max-w-lg rounded-lg border p-5 sm:p-6">
+          <h3 class="text-lg font-semibold text-card-foreground">Edit event</h3>
+          <div class="mt-4 space-y-4">
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-summary">Title</label>
+              <input
+                id="event-edit-summary"
+                v-model="editSummary"
+                type="text"
+                class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                placeholder="Event title"
+              />
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-date">Date</label>
+              <Litepicker
+                id="event-edit-date"
+                v-model="editDate"
+                :options="singleDateLitepickerOptions"
+              />
+            </div>
+            <label class="flex items-center gap-2 text-sm text-card-foreground">
+              <input v-model="editIsAllDay" type="checkbox" class="h-4 w-4 rounded border-border/70" />
+              All day
+            </label>
+            <div v-if="!editIsAllDay" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-card-foreground" for="event-edit-start-time">Start time</label>
+                <input
+                  id="event-edit-start-time"
+                  v-model="editStartTime"
+                  type="time"
+                  class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-card-foreground" for="event-edit-end-time">End time</label>
+                <input
+                  id="event-edit-end-time"
+                  v-model="editEndTime"
+                  type="time"
+                  class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-between">
+            <button
+              @click="deleteSelectedEvent"
+              :disabled="isLoading"
+              class="event-modal-delete rounded-md border px-4 py-2 text-sm font-medium transition"
+            >
+              Delete
+            </button>
+            <div class="flex flex-col gap-2 sm:flex-row">
+              <button
+                @click="closeEventModal"
+                :disabled="isLoading"
+                class="event-modal-cancel rounded-md border px-4 py-2 text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                @click="saveSelectedEvent"
+                :disabled="isLoading"
+                class="agenda-create-button rounded-md px-4 py-2 text-sm font-medium text-white transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <!-- Settings Modal -->
@@ -698,5 +1003,33 @@ function handleOpenSettings() {
 
 .feedback-alert.event-row-today {
   color: #ffffff;
+}
+
+.event-modal-overlay {
+  background-color: hsl(220 26% 9% / 0.6);
+}
+
+.event-modal-card {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--card) / 0.96);
+  box-shadow: 0 16px 40px hsl(220 45% 8% / 0.45);
+}
+
+.event-modal-cancel {
+  border-color: hsl(var(--border) / 0.7);
+  color: hsl(var(--card-foreground));
+}
+
+.event-modal-cancel:hover {
+  background-color: hsl(var(--secondary) / 0.5);
+}
+
+.event-modal-delete {
+  border-color: hsl(var(--destructive) / 0.5);
+  color: hsl(var(--destructive));
+}
+
+.event-modal-delete:hover {
+  background-color: hsl(var(--destructive) / 0.14);
 }
 </style>
