@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCalendarStore } from '@/stores/calendar'
 import { ArrowRightEndOnRectangleIcon, CalendarDaysIcon, ClockIcon, PlusIcon } from '@heroicons/vue/24/solid'
@@ -7,6 +8,131 @@ import { requestAccessToken } from '@/services/gsiService'
 const authStore = useAuthStore()
 const calendarStore = useCalendarStore()
 const tokenRefreshBufferMs = 30 * 1000
+const CALENDAR_VISIBILITY_STORAGE_KEY = 'visible_google_calendar_account_ids'
+const visibleCalendarIds = ref<Set<string>>(new Set())
+const showCalendarFilters = ref(false)
+
+function getCalendarVisibilityKey(accountId: string, calendarId: string) {
+  return `${accountId}::${calendarId}`
+}
+
+function readStoredVisibleCalendarIds() {
+  const raw = localStorage.getItem(CALENDAR_VISIBILITY_STORAGE_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return null
+    return new Set(parsed.filter((value): value is string => typeof value === 'string'))
+  } catch {
+    return null
+  }
+}
+
+function persistVisibleCalendarIds() {
+  localStorage.setItem(CALENDAR_VISIBILITY_STORAGE_KEY, JSON.stringify(Array.from(visibleCalendarIds.value)))
+}
+
+function syncVisibleCalendarIdsWithAccounts() {
+  const allCalendarKeys = authStore.accounts.flatMap((account) =>
+    (account.calendars ?? []).map((calendar) => getCalendarVisibilityKey(account.id, calendar.id)),
+  )
+
+  if (allCalendarKeys.length === 0) {
+    visibleCalendarIds.value = new Set()
+    localStorage.removeItem(CALENDAR_VISIBILITY_STORAGE_KEY)
+    return
+  }
+
+  const stored = readStoredVisibleCalendarIds()
+  if (!stored) {
+    visibleCalendarIds.value = new Set(allCalendarKeys)
+    persistVisibleCalendarIds()
+    return
+  }
+
+  const nextVisibleIds = new Set(allCalendarKeys.filter((key) => stored.has(key)))
+  allCalendarKeys.forEach((key) => {
+    if (!stored.has(key)) {
+      nextVisibleIds.add(key)
+    }
+  })
+  if (stored.size > 0 && nextVisibleIds.size === 0) {
+    allCalendarKeys.forEach((key) => nextVisibleIds.add(key))
+  }
+  visibleCalendarIds.value = nextVisibleIds
+  persistVisibleCalendarIds()
+}
+
+function isCalendarVisible(accountId: string, calendarId: string) {
+  return visibleCalendarIds.value.has(getCalendarVisibilityKey(accountId, calendarId))
+}
+
+function toggleCalendarVisibility(accountId: string, calendarId: string) {
+  const key = getCalendarVisibilityKey(accountId, calendarId)
+  const next = new Set(visibleCalendarIds.value)
+  if (next.has(key)) {
+    next.delete(key)
+  } else {
+    next.add(key)
+  }
+  visibleCalendarIds.value = next
+  persistVisibleCalendarIds()
+}
+
+function showAllCalendars() {
+  const allKeys = authStore.accounts.flatMap((account) =>
+    (account.calendars ?? []).map((calendar) => getCalendarVisibilityKey(account.id, calendar.id)),
+  )
+  visibleCalendarIds.value = new Set(allKeys)
+  persistVisibleCalendarIds()
+}
+
+function hideAllCalendars() {
+  visibleCalendarIds.value = new Set()
+  persistVisibleCalendarIds()
+}
+
+function getCalendarDotColor(accountId: string, calendarId: string, backgroundColor?: string) {
+  if (backgroundColor) {
+    return backgroundColor
+  }
+
+  const key = `${accountId}:${calendarId}`
+  let hash = 0
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash << 5) - hash + key.charCodeAt(i)
+    hash |= 0
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue} 70% 52%)`
+}
+
+const calendarFilters = computed(() =>
+  authStore.accounts.flatMap((account) => {
+    const accountLabel = account.user?.email ?? account.id
+    return (account.calendars ?? []).map((calendar) => ({
+      accountId: account.id,
+      calendarId: calendar.id,
+      accountLabel,
+      calendarLabel: calendar.summary,
+      dotColor: getCalendarDotColor(account.id, calendar.id, calendar.backgroundColor),
+      isVisible: isCalendarVisible(account.id, calendar.id),
+      isPrimary: Boolean(calendar.primary),
+    }))
+  }),
+)
+
+watch(
+  () =>
+    authStore.accounts
+      .map((account) => `${account.id}:${(account.calendars ?? []).map((calendar) => calendar.id).join(',')}`)
+      .join('|'),
+  () => {
+    syncVisibleCalendarIdsWithAccounts()
+  },
+  { immediate: true },
+)
 
 function handleLogin(isAddAnother = false) {
   if (isAddAnother) {
@@ -140,6 +266,62 @@ async function setActiveAccount(accountId: string) {
             Je moet inloggen om je Google Calendar te verbinden.
           </p>
         </div>
+
+        <div v-if="calendarFilters.length > 1" class="mt-6 border-t pt-6 dark:border-gray-700">
+          <div class="mb-3 flex items-center justify-between">
+            <h4 class="text-lg font-semibold">Kalenders Zichtbaarheid</h4>
+            <button
+              class="rounded border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+              @click="showCalendarFilters = !showCalendarFilters"
+            >
+              {{ showCalendarFilters ? 'Verberg filters' : 'Toon filters' }}
+            </button>
+          </div>
+          <div v-if="showCalendarFilters" class="mb-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="text-sm text-muted-foreground">Kalenders beheren</div>
+            <div class="flex items-center gap-2">
+              <button
+                class="rounded border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                @click="showAllCalendars"
+              >
+                Alles tonen
+              </button>
+              <button
+                class="rounded border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                @click="hideAllCalendars"
+              >
+                Alles verbergen
+              </button>
+            </div>
+          </div>
+          <ul v-if="showCalendarFilters" class="calendar-filter-list space-y-2">
+            <li
+              v-for="calendar in calendarFilters"
+              :key="`${calendar.accountId}:${calendar.calendarId}`"
+              :class="[
+                'calendar-filter-item flex flex-col items-start justify-between gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center',
+                calendar.isVisible ? 'calendar-filter-item-active' : 'calendar-filter-item-inactive',
+              ]"
+            >
+              <label class="flex w-full min-w-0 cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  :checked="calendar.isVisible"
+                  @change="toggleCalendarVisibility(calendar.accountId, calendar.calendarId)"
+                  class="h-5 w-5 sm:h-4 sm:w-4"
+                />
+                <span class="calendar-dot h-3 w-3 rounded-full" :style="{ backgroundColor: calendar.dotColor }" />
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-medium">{{ calendar.calendarLabel }}</span>
+                  <span class="block truncate text-xs text-muted-foreground">{{ calendar.accountLabel }}</span>
+                </span>
+              </label>
+              <span v-if="calendar.isPrimary" class="calendar-primary-badge self-start rounded-full px-2 py-0.5 text-[10px] font-semibold sm:self-auto">
+                Primary
+              </span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -221,5 +403,37 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.calendar-filter-list {
+  max-height: 15rem;
+  overflow: auto;
+}
+
+.calendar-filter-item-active {
+  border-color: hsl(var(--primary) / 0.5);
+  background-color: hsl(var(--primary) / 0.16);
+}
+
+.calendar-filter-item-inactive {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--background) / 0.2);
+  color: hsl(var(--muted-foreground));
+}
+
+.calendar-dot {
+  box-shadow: 0 0 0 1px hsl(var(--background) / 0.4), 0 0 0 2px hsl(var(--border) / 0.7);
+}
+
+.calendar-primary-badge {
+  border: 1px solid hsl(var(--primary) / 0.45);
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--card-foreground));
+}
+
+@media (max-width: 640px) {
+  .calendar-filter-list {
+    max-height: 12rem;
+  }
 }
 </style>

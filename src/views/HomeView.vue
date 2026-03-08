@@ -1007,17 +1007,17 @@ function handleOpenSettings() {
           </div>
         </div>
         <div v-if="calendarFilters.length > 1 && showCalendarFilters" class="mt-2 rounded-md border border-border/70 p-3">
-          <div class="mb-2 flex items-center justify-end gap-2">
+          <div class="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-end">
             <div class="flex items-center gap-2">
               <button
                 @click="showAllCalendars"
-                class="rounded-md border border-border/70 px-2 py-1 text-xs text-card-foreground transition hover:bg-secondary/40"
+                class="rounded-md border border-border/70 px-3 py-1.5 text-xs text-card-foreground transition hover:bg-secondary/40"
               >
                 Alles tonen
               </button>
               <button
                 @click="hideAllCalendars"
-                class="rounded-md border border-border/70 px-2 py-1 text-xs text-card-foreground transition hover:bg-secondary/40"
+                class="rounded-md border border-border/70 px-3 py-1.5 text-xs text-card-foreground transition hover:bg-secondary/40"
               >
                 Alles verbergen
               </button>
@@ -1028,16 +1028,16 @@ function handleOpenSettings() {
               v-for="calendar in calendarFilters"
               :key="`${calendar.accountId}:${calendar.calendarId}`"
               :class="[
-                'calendar-filter-item flex items-center justify-between rounded-md border px-3 py-2 transition',
+                'calendar-filter-item flex flex-col items-start justify-between gap-2 rounded-md border px-3 py-2 transition sm:flex-row sm:items-center',
                 calendar.isVisible ? 'calendar-filter-item-active' : 'calendar-filter-item-inactive',
               ]"
             >
-              <label class="flex min-w-0 cursor-pointer items-center gap-3">
+              <label class="flex w-full min-w-0 cursor-pointer items-center gap-3">
                 <input
                   type="checkbox"
                   :checked="calendar.isVisible"
                   @change="toggleCalendarVisibility(calendar.accountId, calendar.calendarId)"
-                  class="h-4 w-4"
+                  class="h-5 w-5 sm:h-4 sm:w-4"
                 />
                 <span class="calendar-dot h-3 w-3 rounded-full" :style="{ backgroundColor: calendar.dotColor }" />
                 <span class="min-w-0">
@@ -1045,7 +1045,7 @@ function handleOpenSettings() {
                   <span class="block truncate text-xs text-muted-foreground">{{ calendar.accountLabel }}</span>
                 </span>
               </label>
-              <span v-if="calendar.isPrimary" class="calendar-primary-badge rounded-full px-2 py-0.5 text-[10px] font-semibold">
+              <span v-if="calendar.isPrimary" class="calendar-primary-badge self-start rounded-full px-2 py-0.5 text-[10px] font-semibold sm:self-auto">
                 Primary
               </span>
             </li>
@@ -1354,6 +1354,12 @@ function handleOpenSettings() {
   border: 1px solid hsl(var(--primary) / 0.45);
   background-color: hsl(var(--primary) / 0.2);
   color: hsl(var(--card-foreground));
+}
+
+@media (max-width: 640px) {
+  .calendar-filter-list {
+    max-height: 12rem;
+  }
 }
 
 .todo-row,
