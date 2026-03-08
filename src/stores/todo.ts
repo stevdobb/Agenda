@@ -10,6 +10,12 @@ interface Todo {
   completed: boolean;
 }
 
+interface PendingTodoCompletion {
+  id: string;
+  content: string;
+  expiresAt: number;
+}
+
 interface GoogleAccount {
   id: string;
   accessToken: string;
@@ -40,7 +46,9 @@ function convertTaskToTodo(task: Task): Todo {
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref<Todo[]>([]);
   const lastError = ref('');
+  const pendingCompletion = ref<PendingTodoCompletion | null>(null);
   const authStore = useAuthStore();
+  let pendingCompletionTimer: ReturnType<typeof setTimeout> | null = null;
 
   function getActiveAccount(): GoogleAccount | null {
     if (!authStore.activeAccountId) {
@@ -113,6 +121,7 @@ export const useTodoStore = defineStore('todo', () => {
 
   async function loadTodos() {
     if (!authStore.isLoggedIn) {
+      clearPendingCompletionState();
       todos.value = [];
       return;
     }
@@ -155,6 +164,9 @@ export const useTodoStore = defineStore('todo', () => {
     }
 
     try {
+      if (pendingCompletion.value?.id === id) {
+        clearPendingCompletionState();
+      }
       lastError.value = '';
       await withTaskAuthRetry((accessToken) => deleteTask(accessToken, id));
       todos.value = todos.value.filter(todo => todo.id !== id);
@@ -166,6 +178,88 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
+  function clearPendingCompletionTimer() {
+    if (pendingCompletionTimer) {
+      clearTimeout(pendingCompletionTimer);
+      pendingCompletionTimer = null;
+    }
+  }
+
+  function clearPendingCompletionState() {
+    clearPendingCompletionTimer();
+    pendingCompletion.value = null;
+  }
+
+  async function finalizePendingCompletion(todoId: string): Promise<boolean> {
+    if (!pendingCompletion.value || pendingCompletion.value.id !== todoId) {
+      return false;
+    }
+
+    const todo = todos.value.find((item) => item.id === todoId);
+    if (!todo) {
+      clearPendingCompletionState();
+      return false;
+    }
+
+    try {
+      lastError.value = '';
+      const updatedTask = await withTaskAuthRetry((accessToken) => updateTask(accessToken, todoId, true));
+      todo.completed = updatedTask.status === 'completed';
+      clearPendingCompletionState();
+      return true;
+    } catch (error) {
+      console.error('Failed to finalize todo completion:', error);
+      lastError.value = error instanceof Error ? error.message : String(error);
+      todo.completed = false;
+      clearPendingCompletionState();
+      return false;
+    }
+  }
+
+  async function queueTodoCompletion(id: string): Promise<boolean> {
+    const todo = todos.value.find((item) => item.id === id);
+    if (!todo || todo.completed) {
+      return false;
+    }
+
+    if (pendingCompletion.value && pendingCompletion.value.id !== id) {
+      await finalizePendingCompletion(pendingCompletion.value.id);
+    }
+
+    todo.completed = true;
+    const expiresAt = Date.now() + 10_000;
+    pendingCompletion.value = {
+      id: todo.id,
+      content: todo.content,
+      expiresAt,
+    };
+
+    clearPendingCompletionTimer();
+    pendingCompletionTimer = setTimeout(() => {
+      void finalizePendingCompletion(id);
+    }, 10_000);
+
+    return true;
+  }
+
+  function undoPendingCompletion(todoId?: string): boolean {
+    if (!pendingCompletion.value) {
+      return false;
+    }
+
+    if (todoId && pendingCompletion.value.id !== todoId) {
+      return false;
+    }
+
+    const todo = todos.value.find((item) => item.id === pendingCompletion.value?.id);
+    if (todo) {
+      todo.completed = false;
+    }
+
+    clearPendingCompletionState();
+    return true;
+  }
+
   async function toggleTodo(id: string): Promise<boolean> {
     if (!authStore.isLoggedIn) {
       return false;
@@ -174,6 +268,14 @@ export const useTodoStore = defineStore('todo', () => {
     const todo = todos.value.find(todo => todo.id === id);
     if (!todo) {
       return false;
+    }
+
+    if (!todo.completed) {
+      return queueTodoCompletion(id);
+    }
+
+    if (pendingCompletion.value?.id === id) {
+      return undoPendingCompletion(id);
     }
 
     try {
@@ -195,6 +297,7 @@ export const useTodoStore = defineStore('todo', () => {
     if (hasAccounts && hasActiveAccount) {
       void loadTodos();
     } else {
+      clearPendingCompletionState();
       todos.value = [];
     }
   });
@@ -208,9 +311,11 @@ export const useTodoStore = defineStore('todo', () => {
   return {
     todos,
     lastError,
+    pendingCompletion,
     loadTodos,
     addTodo,
     removeTodo,
     toggleTodo,
+    undoPendingCompletion,
   };
 });

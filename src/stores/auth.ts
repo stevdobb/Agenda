@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { computed } from 'vue'
-import { getUpcomingEvents } from '@/services/googleCalendar'
+import { getCalendarList, getUpcomingEventsForCalendar, type GoogleCalendarListEntry } from '@/services/googleCalendar'
 
 interface GoogleAccount {
   id: string; // Unique ID for the account (e.g., Google user ID from 'sub' claim)
@@ -9,6 +9,7 @@ interface GoogleAccount {
   expiresAt: number;
   user: any; // User profile data (e.g., name, email, picture)
   color: string; // Unique color for this account's events
+  calendars: GoogleCalendarListEntry[];
   events: any[]; // Events fetched for this account
 }
 
@@ -139,17 +140,37 @@ function checkDarkMode() {
         }
 
         try {
-          const accountEvents = await getUpcomingEvents(account.accessToken, timeMin, timeMax);
+          const calendars = await getCalendarList(account.accessToken);
+          account.calendars = calendars;
+
+          const accountEvents: any[] = [];
+          for (const calendar of calendars) {
+            try {
+              const calendarEvents = await getUpcomingEventsForCalendar(account.accessToken, timeMin, timeMax, calendar.id);
+              accountEvents.push(
+                ...calendarEvents.map((event: any) => ({
+                  ...event,
+                  accountId: account.id,
+                  accountColor: account.color,
+                  calendarId: calendar.id,
+                  calendarSummary: calendar.summary,
+                  calendarPrimary: Boolean(calendar.primary),
+                })),
+              );
+            } catch (calendarError) {
+              console.error(
+                `AuthStore: Failed to fetch events for calendar ${calendar.summary} (${calendar.id}) of ${account.user.email}:`,
+                calendarError,
+              );
+            }
+          }
+
           console.log(`AuthStore: Fetched ${accountEvents.length} events for account ${account.user.email}.`);
-          // Augment events with account ID and color before storing
-          account.events = accountEvents.map((event: any) => ({
-            ...event,
-            accountId: account.id,
-            accountColor: account.color,
-          }));
+          account.events = accountEvents;
         } catch (error) {
           console.error(`AuthStore: Failed to fetch events for account ${account.user.email}:`, error);
           account.events = []; // Clear events for failed fetch
+          account.calendars = [];
         }
       }
 
@@ -180,6 +201,7 @@ function checkDarkMode() {
         expiresAt: expirationTime,
         user: user_data,
         color: accountColors[accounts.value.length % accountColors.length], // Assign a color
+        calendars: [],
         events: [],
       };
       accounts.value.push(newAccount);
@@ -255,6 +277,7 @@ function checkDarkMode() {
 
       accounts.value = stillValidAccounts.map((account) => ({
         ...account,
+        calendars: Array.isArray(account.calendars) ? account.calendars : [],
         events: Array.isArray(account.events) ? account.events : [],
       }));
 

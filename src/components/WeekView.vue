@@ -101,6 +101,12 @@ function isToday(date: Date) {
   const today = new Date();
   return date.toDateString() === today.toDateString();
 }
+
+function getEventRenderKey(event: any) {
+  const accountId = event.accountId ?? 'no-account'
+  const calendarId = event.calendarId ?? 'primary'
+  return `${accountId}:${calendarId}:${event.id}`
+}
 </script>
 
 <template>
@@ -135,7 +141,7 @@ function isToday(date: Date) {
             <ul class="space-y-1.5">
               <li
                 v-for="event in filteredEventsByWeek[toLocalDateKey(day)]"
-                :key="event.id"
+                :key="getEventRenderKey(event)"
                 class="event-chip cursor-pointer rounded-md px-2 py-1.5 text-sm transition hover:border-primary/70"
                 @click="emit('eventClicked', event)"
               >

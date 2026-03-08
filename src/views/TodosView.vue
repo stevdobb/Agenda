@@ -137,6 +137,17 @@ watch(
           <p v-if="feedbackMessage" :class="['mb-4 rounded-md border px-3 py-2 text-sm', feedbackTone === 'error' ? 'border-red-400/60 text-red-100' : 'border-emerald-400/60 text-emerald-100']">
             {{ feedbackMessage }}
           </p>
+          <div v-if="todoStore.pendingCompletion" class="mb-4 flex items-center justify-between rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm text-card-foreground">
+            <span>
+              "{{ todoStore.pendingCompletion.content }}" afgewerkt. Ongedaan maken?
+            </span>
+            <button
+              @click="todoStore.undoPendingCompletion(todoStore.pendingCompletion.id)"
+              class="rounded-md border border-amber-400/60 px-2 py-1 text-xs font-semibold transition hover:bg-amber-500/15"
+            >
+              Undo (10s)
+            </button>
+          </div>
 
           <div v-if="visibleTodos.length > 0">
             <ul class="space-y-2">
@@ -207,3 +218,47 @@ watch(
     </div>
   </div>
 </template>
+
+<style scoped>
+.agenda-shell-panel {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--card) / 0.9);
+  box-shadow: 0 14px 30px hsl(218 72% 20% / 0.22), inset 0 1px 0 hsl(0 0% 100% / 0.18);
+}
+
+.agenda-input {
+  border-color: hsl(var(--input) / 0.85);
+  background-color: hsl(var(--background) / 0.25);
+  color: hsl(var(--card-foreground));
+}
+
+.agenda-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.agenda-input:focus {
+  border-color: hsl(var(--ring));
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3);
+}
+
+.agenda-create-button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.agenda-create-button:hover {
+  filter: brightness(0.95);
+}
+
+.todo-row {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--background) / 0.2);
+}
+
+.todo-row-completed {
+  border-color: hsl(156 63% 42% / 0.5);
+  background-color: hsl(156 63% 42% / 0.2);
+  color: hsl(var(--muted-foreground));
+}
+</style>

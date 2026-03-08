@@ -29,6 +29,8 @@ const tokenRefreshBufferMs = 30 * 1000
 const showEventModal = ref(false)
 const showCreateHelpModal = ref(false)
 const selectedEvent = ref<GoogleCalendarEvent | null>(null)
+const CALENDAR_VISIBILITY_STORAGE_KEY = 'visible_google_calendar_account_ids'
+const visibleCalendarIds = ref<Set<string>>(new Set())
 const editSummary = ref('')
 const editDate = ref('')
 const editStartTime = ref('09:00')
@@ -45,6 +47,8 @@ interface GoogleCalendarEvent {
   id: string
   summary?: string
   accountId?: string
+  calendarId?: string
+  calendarSummary?: string
   start: {
     dateTime?: string
     date?: string
@@ -61,9 +65,97 @@ interface GoogleAccount {
   id: string
   accessToken: string
   expiresAt: number
+  calendars?: Array<{
+    id: string
+    summary: string
+    primary?: boolean
+    backgroundColor?: string
+  }>
   user?: {
     email?: string
   }
+}
+
+function getCalendarVisibilityKey(accountId: string, calendarId: string) {
+  return `${accountId}::${calendarId}`
+}
+
+function readStoredVisibleCalendarIds() {
+  const raw = localStorage.getItem(CALENDAR_VISIBILITY_STORAGE_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return null
+    return new Set(parsed.filter((value): value is string => typeof value === 'string'))
+  } catch {
+    return null
+  }
+}
+
+function persistVisibleCalendarIds() {
+  localStorage.setItem(CALENDAR_VISIBILITY_STORAGE_KEY, JSON.stringify(Array.from(visibleCalendarIds.value)))
+}
+
+function syncVisibleCalendarIdsWithAccounts() {
+  const allCalendarKeys = (authStore.accounts as GoogleAccount[]).flatMap((account) =>
+    (account.calendars ?? []).map((calendar) => getCalendarVisibilityKey(account.id, calendar.id)),
+  )
+
+  if (allCalendarKeys.length === 0) {
+    visibleCalendarIds.value = new Set()
+    localStorage.removeItem(CALENDAR_VISIBILITY_STORAGE_KEY)
+    return
+  }
+
+  const stored = readStoredVisibleCalendarIds()
+  if (!stored) {
+    visibleCalendarIds.value = new Set(allCalendarKeys)
+    persistVisibleCalendarIds()
+    return
+  }
+
+  const nextVisibleIds = new Set(allCalendarKeys.filter((key) => stored.has(key)))
+  // New calendars should be enabled by default.
+  allCalendarKeys.forEach((key) => {
+    if (!stored.has(key)) {
+      nextVisibleIds.add(key)
+    }
+  })
+  if (stored.size > 0 && nextVisibleIds.size === 0) {
+    allCalendarKeys.forEach((key) => nextVisibleIds.add(key))
+  }
+  visibleCalendarIds.value = nextVisibleIds
+  persistVisibleCalendarIds()
+}
+
+function isCalendarVisible(accountId: string, calendarId: string) {
+  return visibleCalendarIds.value.has(getCalendarVisibilityKey(accountId, calendarId))
+}
+
+function toggleCalendarVisibility(accountId: string, calendarId: string) {
+  const key = getCalendarVisibilityKey(accountId, calendarId)
+  const next = new Set(visibleCalendarIds.value)
+  if (next.has(key)) {
+    next.delete(key)
+  } else {
+    next.add(key)
+  }
+  visibleCalendarIds.value = next
+  persistVisibleCalendarIds()
+}
+
+function showAllCalendars() {
+  const allKeys = (authStore.accounts as GoogleAccount[]).flatMap((account) =>
+    (account.calendars ?? []).map((calendar) => getCalendarVisibilityKey(account.id, calendar.id)),
+  )
+  visibleCalendarIds.value = new Set(allKeys)
+  persistVisibleCalendarIds()
+}
+
+function hideAllCalendars() {
+  visibleCalendarIds.value = new Set()
+  persistVisibleCalendarIds()
 }
 
 // Fetch events whenever auth/view/date changes and user is logged in.
@@ -80,6 +172,17 @@ watch(() => [authStore.isLoggedIn, currentDate.value, currentView.value] as cons
   const { fetchStart, fetchEnd } = getFetchRangeForView(newView, newDate);
   await authStore.fetchUpcomingEvents(fetchStart, fetchEnd);
 }, { immediate: true })
+
+watch(
+  () =>
+    (authStore.accounts as GoogleAccount[])
+      .map((account) => `${account.id}:${(account.calendars ?? []).map((calendar) => calendar.id).join(',')}`)
+      .join('|'),
+  () => {
+    syncVisibleCalendarIdsWithAccounts()
+  },
+  { immediate: true },
+)
 
 
 function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
@@ -355,6 +458,27 @@ function getEventDateKey(event: GoogleCalendarEvent) {
   return ''
 }
 
+function getEventRenderKey(event: GoogleCalendarEvent) {
+  const accountId = event.accountId ?? 'no-account'
+  const calendarId = event.calendarId ?? 'primary'
+  return `${accountId}:${calendarId}:${event.id}`
+}
+
+function getCalendarDotColor(accountId: string, calendarId: string, backgroundColor?: string) {
+  if (backgroundColor) {
+    return backgroundColor
+  }
+
+  const key = `${accountId}:${calendarId}`
+  let hash = 0
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash << 5) - hash + key.charCodeAt(i)
+    hash |= 0
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue} 70% 52%)`
+}
+
 function isAllDayEvent(event: GoogleCalendarEvent) {
   return Boolean(event.start.date && !event.start.dateTime)
 }
@@ -401,7 +525,7 @@ async function refreshVisibleEvents() {
 
 const groupedEvents = computed(() => {
   const groups: { [key: string]: any[] } = {};
-  (authStore.upcomingEvents as GoogleCalendarEvent[]).forEach((event) => {
+  filteredUpcomingEvents.value.forEach((event) => {
     const dateKey = getEventDateKey(event)
     if (!dateKey) return
     if (!groups[dateKey]) {
@@ -440,6 +564,29 @@ const groupedEvents = computed(() => {
 
   return sortedGroups;
 });
+
+const calendarFilters = computed(() =>
+  (authStore.accounts as GoogleAccount[]).flatMap((account) => {
+    const accountLabel = account.user?.email ?? account.id
+    return (account.calendars ?? []).map((calendar) => ({
+      accountId: account.id,
+      calendarId: calendar.id,
+      accountLabel,
+      calendarLabel: calendar.summary,
+      dotColor: getCalendarDotColor(account.id, calendar.id, calendar.backgroundColor),
+      isVisible: isCalendarVisible(account.id, calendar.id),
+      isPrimary: Boolean(calendar.primary),
+    }))
+  }),
+)
+
+const filteredUpcomingEvents = computed(() => {
+  const visibleIds = visibleCalendarIds.value
+  return (authStore.upcomingEvents as GoogleCalendarEvent[]).filter((event) => {
+    if (!event.accountId || !event.calendarId) return true
+    return visibleIds.has(getCalendarVisibilityKey(event.accountId, event.calendarId))
+  })
+})
 
 // New computed property for displayed events based on current view
 const displayedGroupedEvents = computed(() => {
@@ -685,7 +832,7 @@ async function saveSelectedEvent() {
       }
     }
 
-    await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload)
+    await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload, eventToUpdate.calendarId ?? 'primary')
     setFeedbackSuccess('Event successfully updated.')
     dismissEventModal()
     await refreshVisibleEvents()
@@ -714,7 +861,7 @@ async function deleteEvent(event: GoogleCalendarEvent) {
   }
 
   try {
-    await deleteCalendarEvent(account.accessToken, event.id)
+    await deleteCalendarEvent(account.accessToken, event.id, event.calendarId ?? 'primary')
     setFeedbackSuccess('Event successfully deleted.')
     if (selectedEvent.value?.id === event.id) {
       dismissEventModal()
@@ -847,6 +994,52 @@ function handleOpenSettings() {
             <PlusIcon v-else class="h-6 w-6" />
           </button>
         </div>
+        <div v-if="calendarFilters.length > 1" class="mt-4 rounded-md border border-border/70 p-3">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <p class="text-sm font-semibold text-card-foreground">Kalenders</p>
+            <div class="flex items-center gap-2">
+              <button
+                @click="showAllCalendars"
+                class="rounded-md border border-border/70 px-2 py-1 text-xs text-card-foreground transition hover:bg-secondary/40"
+              >
+                Alles tonen
+              </button>
+              <button
+                @click="hideAllCalendars"
+                class="rounded-md border border-border/70 px-2 py-1 text-xs text-card-foreground transition hover:bg-secondary/40"
+              >
+                Alles verbergen
+              </button>
+            </div>
+          </div>
+          <ul class="calendar-filter-list space-y-2">
+            <li
+              v-for="calendar in calendarFilters"
+              :key="`${calendar.accountId}:${calendar.calendarId}`"
+              :class="[
+                'calendar-filter-item flex items-center justify-between rounded-md border px-3 py-2 transition',
+                calendar.isVisible ? 'calendar-filter-item-active' : 'calendar-filter-item-inactive',
+              ]"
+            >
+              <label class="flex min-w-0 cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  :checked="calendar.isVisible"
+                  @change="toggleCalendarVisibility(calendar.accountId, calendar.calendarId)"
+                  class="h-4 w-4"
+                />
+                <span class="calendar-dot h-3 w-3 rounded-full" :style="{ backgroundColor: calendar.dotColor }" />
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-medium">{{ calendar.calendarLabel }}</span>
+                  <span class="block truncate text-xs text-muted-foreground">{{ calendar.accountLabel }}</span>
+                </span>
+              </label>
+              <span v-if="calendar.isPrimary" class="calendar-primary-badge rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                Primary
+              </span>
+            </li>
+          </ul>
+        </div>
         <div
           v-if="feedbackMessage"
           class="feedback-alert mt-4 rounded-md border px-3 py-2 text-sm"
@@ -869,7 +1062,7 @@ function handleOpenSettings() {
               <ul class="space-y-1">
                 <li
                   v-for="event in dayGroup.events"
-                  :key="event.id"
+                  :key="getEventRenderKey(event)"
                   :class="[
                     'event-row flex cursor-pointer items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200',
                     isAllDayEvent(event) ? 'event-row-all-day' : '',
@@ -904,7 +1097,7 @@ function handleOpenSettings() {
             :currentDate="currentDate"
             @update:currentDate="currentDate = $event"
             @eventClicked="openEventModal"
-            :events="authStore.upcomingEvents"
+            :events="filteredUpcomingEvents"
             :is24HourFormat="authStore.is24HourFormat"
           />
         </div>
@@ -916,18 +1109,29 @@ function handleOpenSettings() {
             @update:currentDate="currentDate = $event"
             @dayClicked="handleMonthDayClick"
             @eventClicked="openEventModal"
-            :events="authStore.upcomingEvents"
+            :events="filteredUpcomingEvents"
             :is24HourFormat="authStore.is24HourFormat"
           />
         </div>
 
         <!-- Todo List Section -->
-        <div v-if="visibleTodos.length > 0" class="mt-8 border-t border-border/70 pt-6">
+        <div v-if="visibleTodos.length > 0 || todoStore.pendingCompletion" class="mt-8 border-t border-border/70 pt-6">
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
             <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
             My Todos
           </h2>
-          <ul class="space-y-2">
+          <div v-if="todoStore.pendingCompletion" class="mb-4 flex items-center justify-between rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm text-card-foreground">
+            <span>
+              "{{ todoStore.pendingCompletion.content }}" afgewerkt. Ongedaan maken?
+            </span>
+            <button
+              @click="todoStore.undoPendingCompletion(todoStore.pendingCompletion.id)"
+              class="rounded-md border border-amber-400/60 px-2 py-1 text-xs font-semibold transition hover:bg-amber-500/15"
+            >
+              Undo (10s)
+            </button>
+          </div>
+          <ul v-if="visibleTodos.length > 0" class="space-y-2">
             <li v-for="todo in visibleTodos" :key="todo.id"
                 :class="['todo-row flex items-center justify-between space-x-3 rounded-md border p-3', todo.completed ? 'todo-row-completed line-through' : '']">
               <div class="flex items-center space-x-3">
@@ -939,6 +1143,9 @@ function handleOpenSettings() {
               </button>
             </li>
           </ul>
+          <div v-else class="rounded-md border-2 border-dashed border-border/70 p-4 text-center text-muted-foreground">
+            Geen open todo's.
+          </div>
         </div>
       </div>
         <div v-else class="py-12 text-center">
@@ -1105,6 +1312,37 @@ function handleOpenSettings() {
 
 .agenda-create-button:hover {
   filter: brightness(0.95);
+}
+
+.calendar-filter-list {
+  max-height: 15rem;
+  overflow: auto;
+}
+
+.calendar-filter-item {
+  border-color: hsl(var(--border) / 0.6);
+}
+
+.calendar-filter-item-active {
+  background-color: hsl(var(--primary) / 0.16);
+  border-color: hsl(var(--primary) / 0.5);
+  color: hsl(var(--card-foreground));
+}
+
+.calendar-filter-item-inactive {
+  background-color: hsl(var(--background) / 0.2);
+  border-color: hsl(var(--border) / 0.6);
+  color: hsl(var(--muted-foreground));
+}
+
+.calendar-dot {
+  box-shadow: 0 0 0 1px hsl(var(--background) / 0.4), 0 0 0 2px hsl(var(--border) / 0.7);
+}
+
+.calendar-primary-badge {
+  border: 1px solid hsl(var(--primary) / 0.45);
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--card-foreground));
 }
 
 .todo-row,

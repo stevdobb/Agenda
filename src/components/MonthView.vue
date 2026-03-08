@@ -123,6 +123,12 @@ function isToday(date: Date | null) {
   const today = new Date();
   return date.toDateString() === today.toDateString();
 }
+
+function getEventRenderKey(event: any) {
+  const accountId = event.accountId ?? 'no-account'
+  const calendarId = event.calendarId ?? 'primary'
+  return `${accountId}:${calendarId}:${event.id}`
+}
 </script>
 
 <template>
@@ -160,7 +166,7 @@ function isToday(date: Date | null) {
           {{ day.getDate() }}
         </div>
         <div v-if="day && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
-          <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="event.id"
+          <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="getEventRenderKey(event)"
              class="month-event-chip cursor-pointer truncate rounded-sm px-1 py-0.5 text-card-foreground transition hover:border-primary/70"
              @click.stop="emit('eventClicked', event)"
           >
