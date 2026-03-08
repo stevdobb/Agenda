@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import YearViewPage from '../views/YearViewPage.vue'
+import TodosView from '../views/TodosView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,6 +24,11 @@ const router = createRouter({
       path: '/year',
       name: 'year',
       component: YearViewPage
+    },
+    {
+      path: '/todos',
+      name: 'todos',
+      component: TodosView
     }
   ]
 })

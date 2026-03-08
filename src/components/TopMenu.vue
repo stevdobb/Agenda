@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { CalendarDays, CalendarRange, LayoutGrid, List, Menu, RefreshCcw, Settings2, X } from 'lucide-vue-next'
+import { CalendarDays, CalendarRange, CheckSquare, LayoutGrid, List, Menu, RefreshCcw, Settings2, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -25,6 +25,7 @@ const viewItems = [
   { key: 'list', label: 'List', icon: List },
   { key: 'week', label: 'Week', icon: CalendarRange },
   { key: 'month', label: 'Month', icon: CalendarDays },
+  { key: 'todos', label: 'Todos', icon: CheckSquare },
   { key: 'year', label: 'Year', icon: LayoutGrid },
 ]
 

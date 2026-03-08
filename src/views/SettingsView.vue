@@ -10,6 +10,10 @@ function handleViewSwitch(view: string) {
     router.push('/year')
     return
   }
+  if (view === 'todos') {
+    router.push('/todos')
+    return
+  }
 
   router.push('/agenda')
 }

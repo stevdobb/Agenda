@@ -148,6 +148,11 @@ function handleRestart() {
 }
 
 function handleViewSwitch(view: string) {
+  if (view === 'todos') {
+    router.push('/todos')
+    return
+  }
+
   if (view !== 'year') {
     router.push('/agenda')
   }

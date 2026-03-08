@@ -467,6 +467,8 @@ const displayedGroupedEvents = computed(() => {
   return groupedEvents.value;
 });
 
+const visibleTodos = computed(() => todoStore.todos.filter((todo) => !todo.completed))
+
 async function createEvent() {
   if (!eventText.value.trim() || isLoading.value) return;
 
@@ -480,9 +482,14 @@ async function createEvent() {
   if (input.toLowerCase().startsWith('todo ')) {
     const todoContent = input.substring(5).trim();
     if (todoContent) {
-      todoStore.addTodo(todoContent);
-      setFeedbackSuccess(`Todo added: "${todoContent}"`);
-      eventText.value = ''; // Clear input
+      const added = await todoStore.addTodo(todoContent);
+      if (added) {
+        setFeedbackSuccess(`Todo added: "${todoContent}"`);
+        eventText.value = ''; // Clear input
+      } else {
+        const details = todoStore.lastError ? ` ${todoStore.lastError}` : '';
+        setFeedbackError(`Error: Todo could not be saved to your Google Tasks account.${details}`);
+      }
     } else {
       setFeedbackError('Error: Please provide content for the todo.');
     }
@@ -774,6 +781,8 @@ function handleLogin() {
 function handleViewSwitch(view: string) {
   if (view === 'year') {
     router.push('/year')
+  } else if (view === 'todos') {
+    router.push('/todos')
   } else {
     currentView.value = view as 'list' | 'week' | 'month'
   }
@@ -913,13 +922,13 @@ function handleOpenSettings() {
         </div>
 
         <!-- Todo List Section -->
-        <div v-if="todoStore.todos.length > 0" class="mt-8 border-t border-border/70 pt-6">
+        <div v-if="visibleTodos.length > 0" class="mt-8 border-t border-border/70 pt-6">
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
             <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
             My Todos
           </h2>
           <ul class="space-y-2">
-            <li v-for="todo in todoStore.todos" :key="todo.id"
+            <li v-for="todo in visibleTodos" :key="todo.id"
                 :class="['todo-row flex items-center justify-between space-x-3 rounded-md border p-3', todo.completed ? 'todo-row-completed line-through' : '']">
               <div class="flex items-center space-x-3">
                 <input type="checkbox" :checked="todo.completed" @change="todoStore.toggleTodo(todo.id)" class="form-checkbox h-5 w-5 text-blue-600">
