@@ -29,6 +29,7 @@ const tokenRefreshBufferMs = 30 * 1000
 const showEventModal = ref(false)
 const showCreateHelpModal = ref(false)
 const selectedEvent = ref<GoogleCalendarEvent | null>(null)
+const showCalendarFilters = ref(false)
 const CALENDAR_VISIBILITY_STORAGE_KEY = 'visible_google_calendar_account_ids'
 const visibleCalendarIds = ref<Set<string>>(new Set())
 const editSummary = ref('')
@@ -994,9 +995,19 @@ function handleOpenSettings() {
             <PlusIcon v-else class="h-6 w-6" />
           </button>
         </div>
-        <div v-if="calendarFilters.length > 1" class="mt-4 rounded-md border border-border/70 p-3">
+        <div v-if="calendarFilters.length > 1" class="mt-4">
           <div class="mb-2 flex items-center justify-between gap-2">
             <p class="text-sm font-semibold text-card-foreground">Kalenders</p>
+            <button
+              @click="showCalendarFilters = !showCalendarFilters"
+              class="rounded-md border border-border/70 px-2 py-1 text-xs text-card-foreground transition hover:bg-secondary/40"
+            >
+              {{ showCalendarFilters ? 'Kalenderfilters verbergen' : 'Kalenderfilters tonen' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="calendarFilters.length > 1 && showCalendarFilters" class="mt-2 rounded-md border border-border/70 p-3">
+          <div class="mb-2 flex items-center justify-end gap-2">
             <div class="flex items-center gap-2">
               <button
                 @click="showAllCalendars"
