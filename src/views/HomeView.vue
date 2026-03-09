@@ -793,7 +793,7 @@ function handleOpenSettings() {
 
 <template>
   <div class="year-weather-theme">
-    <div class="page-container mx-auto max-w-7xl px-4 pt-28 pb-4 sm:px-6 sm:pt-32 sm:pb-6 lg:px-8 lg:pt-32 lg:pb-8">
+    <div class="page-container mx-auto max-w-7xl px-4 pt-20 pb-4 sm:px-6 sm:pt-24 sm:pb-6 lg:px-8 lg:pt-24 lg:pb-8">
       <TopMenu 
         :currentView="currentView" 
         :showSettings="true" 
