@@ -16,6 +16,7 @@ let pendingTokenRequest:
       timeoutId: ReturnType<typeof setTimeout>;
     }
   | null = null;
+let pendingTokenPromise: Promise<google.accounts.oauth2.TokenResponse> | null = null;
 
 export interface RequestAccessTokenOptions {
   prompt?: string;
@@ -28,6 +29,7 @@ function clearPendingTokenRequest() {
   }
   clearTimeout(pendingTokenRequest.timeoutId);
   pendingTokenRequest = null;
+  pendingTokenPromise = null;
 }
 
 function isGsiReady() {
@@ -182,12 +184,13 @@ export function initializeGsi(): Promise<void> {
 // Prompts the user for a new access token
 export function requestAccessToken(options?: RequestAccessTokenOptions): Promise<google.accounts.oauth2.TokenResponse> {
   const uiStore = useUiStore();
-  return new Promise((resolve, reject) => {
-    if (pendingTokenRequest) {
-      reject(new Error('A token request is already in progress.'));
-      return;
-    }
 
+  // If a request is already in progress, reuse it instead of failing
+  if (pendingTokenRequest && pendingTokenPromise) {
+    return pendingTokenPromise;
+  }
+
+  pendingTokenPromise = new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       if (pendingTokenRequest) {
         pendingTokenRequest.reject(new Error('Timed out while requesting a Google access token.'));
@@ -237,4 +240,6 @@ export function requestAccessToken(options?: RequestAccessTokenOptions): Promise
         clearPendingTokenRequest();
       });
   });
+
+  return pendingTokenPromise!;
 }
