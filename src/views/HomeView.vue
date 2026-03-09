@@ -10,6 +10,7 @@ import MonthView from '@/components/MonthView.vue'
 import Litepicker from '@/components/Litepicker.vue'
 import TopMenu from '@/components/TopMenu.vue'
 import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import { Repeat2 } from 'lucide-vue-next'
 import MiniCalendar from '@/components/MiniCalendar.vue'
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent, moveCalendarEvent } from '@/services/googleCalendar'
@@ -1292,7 +1293,10 @@ onUnmounted(() => {
                     {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : getEventDateKey(event) }}
                   </p>
                   <div>
-                    <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
+                    <p class="flex items-center gap-1 text-sm font-semibold text-card-foreground">
+                      {{ event.summary }}
+                      <Repeat2 v-if="event.recurrence?.length || event.recurringEventId" class="h-3 w-3 shrink-0 text-muted-foreground" />
+                    </p>
                     <p v-if="event.location" class="text-xs text-muted-foreground">{{ event.location }}</p>
                   </div>
                 </div>
@@ -1357,7 +1361,10 @@ onUnmounted(() => {
                       {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : $t('all_day') }}
                     </p>
                     <div>
-                      <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
+                      <p class="flex items-center gap-1 text-sm font-semibold text-card-foreground">
+                        {{ event.summary }}
+                        <Repeat2 v-if="event.recurrence?.length || event.recurringEventId" class="h-3 w-3 shrink-0 text-muted-foreground" />
+                      </p>
                       <p v-if="event.location" class="text-xs text-muted-foreground">{{ event.location }}</p>
                     </div>
                   </div>

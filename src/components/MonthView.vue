@@ -2,6 +2,7 @@
 import { defineProps, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
+import { Repeat2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const props = defineProps<{
@@ -208,13 +209,14 @@ function getEventRenderKey(event: any) {
         </div>
         <div v-if="day && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
           <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="getEventRenderKey(event)"
-             class="month-event-chip cursor-grab truncate rounded-sm py-0.5 pr-1 text-card-foreground transition hover:border-primary/70"
+             class="month-event-chip flex cursor-grab items-center gap-0.5 rounded-sm py-0.5 pr-1 text-card-foreground transition hover:border-primary/70"
              draggable="true"
              @dragstart="onDragStart($event, event)"
              :style="event.calendarColor ? { borderLeftColor: event.calendarColor, borderLeftWidth: '3px', paddingLeft: '4px' } : { paddingLeft: '4px' }"
              @click.stop="emit('eventClicked', event)"
           >
-            {{ formatEventTime(event.start.dateTime) }} {{ event.summary }}
+            <span class="truncate">{{ formatEventTime(event.start.dateTime) }} {{ event.summary }}</span>
+            <Repeat2 v-if="event.recurrence?.length || event.recurringEventId" class="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
           </p>
         </div>
       </div>

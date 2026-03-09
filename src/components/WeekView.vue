@@ -2,6 +2,7 @@
 import { defineProps, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
+import { Repeat2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const props = defineProps<{
@@ -186,7 +187,10 @@ function getEventRenderKey(event: any) {
                 <p class="event-chip-time text-xs font-semibold text-muted-foreground">
                   {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : $t('all_day') }}
                 </p>
-                <p class="event-chip-title font-semibold text-card-foreground">{{ event.summary }}</p>
+                <p class="event-chip-title flex items-center gap-1 font-semibold text-card-foreground">
+                  <span class="truncate">{{ event.summary }}</span>
+                  <Repeat2 v-if="event.recurrence?.length || event.recurringEventId" class="h-3 w-3 shrink-0 text-muted-foreground" :title="'recurring'" />
+                </p>
               </li>
             </ul>
           </div>
