@@ -1,0 +1,21 @@
+<template>
+  <div class="prose p-4">
+    <h1>Terms of Service</h1>
+    <p>Welcome to our application. By using our service, you agree to these terms of service. Please read them carefully.</p>
+    
+    <h2>1. Using our Services</h2>
+    <p>You must follow any policies made available to you within the Services. Don’t misuse our Services. For example, don’t interfere with our Services or try to access them using a method other than the interface and the instructions that we provide.</p>
+
+    <h2>2. Privacy and Copyright Protection</h2>
+    <p>Our privacy policy explains how we treat your personal data and protect your privacy when you use our Services. By using our Services, you agree that we can use such data in accordance with our privacy policies.</p>
+
+    <h2>3. Your Content in our Services</h2>
+    <p>Some of our Services allow you to upload, submit, store, send or receive content. You retain ownership of any intellectual property rights that you hold in that content. In short, what belongs to you stays yours.</p>
+
+    <h2>4. Modifying and Terminating our Services</h2>
+    <p>We are constantly changing and improving our Services. We may add or remove functionalities or features, and we may suspend or stop a Service altogether.</p>
+
+    <h2>5. About these Terms</h2>
+    <p>We may modify these terms or any additional terms that apply to a Service to, for example, reflect changes to the law or changes to our Services. You should look at the terms regularly. We’ll post notice of modifications to these terms on this page.</p>
+  </div>
+</template>
