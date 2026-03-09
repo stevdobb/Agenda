@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useCalendarStore } from '@/stores/calendar'
 import { ArrowRightEndOnRectangleIcon, CalendarDaysIcon, ClockIcon, PlusIcon } from '@heroicons/vue/24/solid'
 import { requestAccessToken } from '@/services/gsiService'
+
+const { locale } = useI18n()
+
+watch(locale, (newLocale) => {
+  document.documentElement.lang = newLocale
+  localStorage.setItem('language', newLocale)
+})
 
 const authStore = useAuthStore()
 const calendarStore = useCalendarStore()
@@ -172,7 +180,7 @@ async function setActiveAccount(accountId: string) {
         <div class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700">
           <div class="flex items-center">
             <ClockIcon class="mr-3 h-5 w-5 text-blue-400" />
-            <span>24-uurs Formaat</span>
+            <span>{{ $t('24h_format') }}</span>
           </div>
           <label class="switch">
             <input type="checkbox" :checked="authStore.is24HourFormat" @change="authStore.toggle24HourFormat" />
@@ -183,7 +191,7 @@ async function setActiveAccount(accountId: string) {
         <div class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700">
           <div class="flex items-center">
             <CalendarDaysIcon class="mr-3 h-5 w-5 text-green-400" />
-            <span>Totaal Aantal Verlofdagen</span>
+            <span>{{ $t('total_leave_days') }}</span>
           </div>
           <input
             v-model.number="calendarStore.totalLeaveDays"
@@ -191,10 +199,21 @@ async function setActiveAccount(accountId: string) {
             class="w-20 rounded-md border p-1 text-center dark:border-gray-600 dark:bg-gray-900"
           />
         </div>
+        <div class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700">
+          <div class="flex items-center">
+            <span class="mr-3 h-5 w-5 text-green-400"></span>
+            <span>{{ $t('language') }}</span>
+          </div>
+          <select v-model="locale" class="w-120 rounded-md border p-1 text-center dark:border-gray-600 dark:bg-gray-900">
+            <option value="en">English</option>
+            <option value="nl">Nederlands</option>
+            <option value="fr">Français</option>
+          </select>
+        </div>
       </div>
 
       <div class="border-t pt-6 dark:border-gray-700">
-        <h4 class="mb-3 text-lg font-semibold">Verbonden Accounts</h4>
+        <h4 class="mb-3 text-lg font-semibold">{{ $t('connected_accounts') }}</h4>
         <template v-if="authStore.isLoggedIn">
           <div class="mb-4 space-y-3">
             <div
@@ -224,13 +243,13 @@ async function setActiveAccount(accountId: string) {
                   class="rounded bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
                   @click="setActiveAccount(account.id)"
                 >
-                  Actief Instellen
+                  {{ $t('set_active') }}
                 </button>
                 <button
                   class="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
                   @click="authStore.removeAccount(account.id)"
                 >
-                  Verwijderen
+                  {{ $t('remove') }}
                 </button>
               </div>
             </div>
@@ -241,7 +260,7 @@ async function setActiveAccount(accountId: string) {
             @click="handleLogin(true)"
           >
             <PlusIcon class="mr-2 h-5 w-5" />
-            Nog een Account Toevoegen
+            {{ $t('add_another_account') }}
           </button>
 
           <div class="mt-4 border-t pt-4 dark:border-gray-700 text-center">
@@ -250,7 +269,7 @@ async function setActiveAccount(accountId: string) {
               @click="authStore.clearAuth()"
             >
               <ArrowRightEndOnRectangleIcon class="mr-2 h-5 w-5" />
-              Alle Accounts Uitloggen
+              {{ $t('logout_all_accounts') }}
             </button>
           </div>
         </template>
@@ -260,37 +279,37 @@ async function setActiveAccount(accountId: string) {
             class="mx-auto flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
             @click="handleLogin(false)"
           >
-            Inloggen met Google
+            {{ $t('login_with_google') }}
           </button>
           <p class="mt-2 text-sm text-gray-500 dark:text-gray-300">
-            Je moet inloggen om je Google Calendar te verbinden.
+            {{ $t('login_to_connect_google_calendar') }}
           </p>
         </div>
 
         <div v-if="calendarFilters.length > 1" class="mt-6 border-t pt-6 dark:border-gray-700">
           <div class="mb-3 flex items-center justify-between">
-            <h4 class="text-lg font-semibold">Kalenders Zichtbaarheid</h4>
+            <h4 class="text-lg font-semibold">{{ $t('calendar_visibility') }}</h4>
             <button
               class="rounded border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
               @click="showCalendarFilters = !showCalendarFilters"
             >
-              {{ showCalendarFilters ? 'Verberg filters' : 'Toon filters' }}
+              {{ showCalendarFilters ? $t('hide_filters') : $t('show_filters') }}
             </button>
           </div>
           <div v-if="showCalendarFilters" class="mb-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div class="text-sm text-muted-foreground">Kalenders beheren</div>
+            <div class="text-sm text-muted-foreground">{{ $t('manage_calendars') }}</div>
             <div class="flex items-center gap-2">
               <button
                 class="rounded border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                 @click="showAllCalendars"
               >
-                Alles tonen
+                {{ $t('show_all') }}
               </button>
               <button
                 class="rounded border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                 @click="hideAllCalendars"
               >
-                Alles verbergen
+                {{ $t('hide_all') }}
               </button>
             </div>
           </div>
@@ -326,7 +345,7 @@ async function setActiveAccount(accountId: string) {
     </div>
 
     <div class="h-full pt-0 md:border-l md:pl-8 dark:border-gray-700">
-      <h4 class="mb-3 text-lg font-semibold">Zichtbaarheid Evenemententypes</h4>
+      <h4 class="mb-3 text-lg font-semibold">{{ $t('event_types_visibility') }}</h4>
       <div class="max-h-96 space-y-2 overflow-y-auto pr-2">
         <div
           v-for="eventType in calendarStore.eventTypes"

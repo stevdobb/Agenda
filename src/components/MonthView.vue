@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineProps, computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
 import { Button } from '@/components/ui/button'
 
@@ -8,6 +9,8 @@ const props = defineProps<{
   events: any[],
   is24HourFormat: boolean
 }>()
+
+const { t, locale } = useI18n()
 
 const emit = defineEmits(['update:currentDate', 'dayClicked', 'eventClicked', 'eventMoved'])
 
@@ -58,7 +61,7 @@ function getEventDateKey(event: any) {
 
 // Helper to format date and time
 function formatEventTime(dateTime: string) {
-  if (!dateTime) return 'All day';
+  if (!dateTime) return t('all_day');
   return new Date(dateTime).toLocaleString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
@@ -126,7 +129,16 @@ const filteredEventsByMonth = computed(() => {
 })
 
 const currentMonthYear = computed(() => {
-  return props.currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return props.currentDate.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' });
+})
+
+const weekdayLabels = computed(() => {
+  const fmt = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
+  // Week starting Sunday: 0=Sun, 1=Mon, ..., 6=Sat
+  return [0, 1, 2, 3, 4, 5, 6].map(d => {
+    const date = new Date(2024, 0, d + 7) // Jan 7=Sun, 8=Mon, ..., 13=Sat
+    return fmt.format(date)
+  })
 })
 
 function navigateMonth(direction: 'prev' | 'next') {
@@ -169,12 +181,12 @@ function getEventRenderKey(event: any) {
       </Button>
     </div>
     <div class="mb-4 flex justify-center">
-      <Button @click="goToToday" class="month-today-button">Today</Button>
+      <Button @click="goToToday" class="month-today-button">{{ $t('today') }}</Button>
     </div>
 
     <!-- Calendar Grid -->
     <div class="grid grid-cols-7 gap-1">
-      <div v-for="dayName in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="dayName" class="pb-2 text-center text-sm font-bold text-muted-foreground">
+      <div v-for="dayName in weekdayLabels" :key="dayName" class="pb-2 text-center text-sm font-bold text-muted-foreground">
         {{ dayName }}
       </div>
       <div

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
@@ -14,6 +15,7 @@ import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent, moveCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
 
+const { t, locale } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 const todoStore = useTodoStore() // Instantiate Todo store
@@ -173,8 +175,8 @@ async function ensureActiveAccessToken() {
 
 // Helper to format date and time
 function formatEventTime(dateTime: string) {
-  if (!dateTime) return 'All day';
-  return new Date(dateTime).toLocaleString(undefined, {
+  if (!dateTime) return t('all_day');
+  return new Date(dateTime).toLocaleString(locale.value, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: !authStore.is24HourFormat,
@@ -191,11 +193,11 @@ function formatDayHeader(dateString: string) {
   tomorrow.setDate(today.getDate() + 1);
 
   if (date.getTime() === today.getTime()) {
-    return 'Today';
+    return t('today');
   } else if (date.getTime() === tomorrow.getTime()) {
-    return 'Tomorrow';
+    return t('tomorrow');
   } else {
-    return date.toLocaleString(undefined, {
+    return date.toLocaleString(locale.value, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -579,10 +581,10 @@ async function createEvent() {
     const todoContent = input.substring(5).trim();
     if (todoContent) {
       todoStore.addTodo(todoContent);
-      setFeedbackSuccess(`Todo added: "${todoContent}"`);
+      setFeedbackSuccess(t('todo_added', { content: todoContent }));
       eventText.value = ''; // Clear input
     } else {
-      setFeedbackError('Error: Please provide content for the todo.');
+      setFeedbackError(t('error_todo_content'));
     }
     isLoading.value = false;
     return; // Stop here if it was a todo
@@ -645,7 +647,7 @@ async function createEvent() {
     if (parsedResults.length === 0) {
       summary = extractedTime?.summary ?? normalizedInput;
       if (!summary) {
-        throw new Error("Please provide a title for the event.");
+        throw new Error(t('error_event_title'));
       }
 
       if (!forceAllDay && timeMatch) {
@@ -674,7 +676,7 @@ async function createEvent() {
       summary = summary.replace(/\b(at|om)\b\s*$/i, '').trim();
 
       if (!summary) {
-        throw new Error("Please provide a title for the event.");
+        throw new Error(t('error_event_title'));
       }
 
       startDate = result.start.date();
@@ -709,7 +711,7 @@ async function createEvent() {
 
     const activeAccount = await ensureActiveAccessToken();
     if (!activeAccount) {
-        setFeedbackError('Error: No active account found to create event.');
+        setFeedbackError(t('error_no_account'));
         isLoading.value = false;
         return;
     }
@@ -755,11 +757,11 @@ async function saveSelectedEvent() {
 
   const trimmedSummary = editSummary.value.trim()
   if (!trimmedSummary) {
-    setFeedbackError('Error: Please provide a title for the event.')
+    setFeedbackError(t('error_event_title'))
     return
   }
   if (!editDate.value) {
-    setFeedbackError('Error: Please select a date.')
+    setFeedbackError(t('error_select_date'))
     return
   }
 
@@ -833,7 +835,7 @@ async function saveSelectedEvent() {
       currentCalendarId = targetCalendarId
     }
     await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload, currentCalendarId)
-    setFeedbackSuccess('Event successfully updated.')
+    setFeedbackSuccess(t('event_updated'))
     dismissEventModal()
     await refreshVisibleEvents()
   } catch (error: any) {
@@ -862,7 +864,7 @@ async function deleteEvent(event: GoogleCalendarEvent) {
 
   try {
     await deleteCalendarEvent(account.accessToken, event.id, event.calendarId ?? 'primary')
-    setFeedbackSuccess('Event successfully deleted.')
+    setFeedbackSuccess(t('event_deleted'))
     if (selectedEvent.value?.id === event.id) {
       dismissEventModal()
     }
@@ -1052,7 +1054,7 @@ async function handleEventMoved(event: GoogleCalendarEvent, newDate: Date) {
 
 async function manualFetchEvents() {
   if (!authStore.isLoggedIn) {
-    setFeedbackError('Please log in to refresh events.');
+    setFeedbackError(t('error_login_refresh'));
     return;
   }
 
@@ -1066,7 +1068,7 @@ async function manualFetchEvents() {
 
   const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value);
   authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true);
-  setFeedbackSuccess('Events refreshed.');
+  setFeedbackSuccess(t('events_refreshed'));
 }
 
 function isEventToday(event: GoogleCalendarEvent): boolean {
@@ -1179,7 +1181,7 @@ onUnmounted(() => {
       <!-- Offline Banner -->
       <div v-if="!isOnline" class="offline-banner mb-4 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
         <span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>
-        Je bent offline. Gecachede events worden getoond.
+        {{ $t('offline_message') }}
       </div>
 
       <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
@@ -1188,26 +1190,26 @@ onUnmounted(() => {
         <div v-if="authStore.isLoggedIn" class="mt-3">
         <!-- Notification permission banner -->
         <div v-if="notificationPermission === 'default'" class="notif-banner mb-4 flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-          <span class="text-card-foreground">Wil je meldingen ontvangen voor aankomende events?</span>
+          <span class="text-card-foreground">{{ $t('notification_prompt') }}</span>
           <button @click="requestNotificationPermission" class="notif-allow-btn ml-3 rounded px-2.5 py-1 text-xs font-medium transition">
-            Toestaan
+            {{ $t('allow') }}
           </button>
         </div>
 
         <div class="mb-4 flex items-center gap-2">
-          <h2 class="text-xl font-semibold text-card-foreground">Create a new event</h2>
+          <h2 class="text-xl font-semibold text-card-foreground">{{ $t('create_new_event') }}</h2>
           <button
             @click="openNewEventModal()"
             class="mini-cal-toggle-btn rounded-md border p-1 transition"
-            title="Nieuw event aanmaken"
+            :title="$t('create_new_event')"
           >
             <PlusIcon class="h-4 w-4" />
           </button>
           <button
             @click="showCreateHelpModal = true"
             class="help-icon-button rounded-full p-1 transition"
-            aria-label="Show input help"
-            title="Show input help"
+            :aria-label="$t('show_input_help')"
+            :title="$t('show_input_help')"
           >
             <QuestionMarkCircleIcon class="h-5 w-5" />
           </button>
@@ -1218,14 +1220,14 @@ onUnmounted(() => {
             v-model="eventText"
             @keyup.enter="createEvent"
             type="text"
-            placeholder="e.g., Meeting with John tomorrow at 2pm"
+            :placeholder="$t('event_input_placeholder')"
             class="agenda-input flex-grow rounded-md border p-3 transition"
           />
           <button
             @click="createEvent"
             :disabled="isLoading"
             class="agenda-create-button mt-2 flex w-full items-center justify-center rounded-md p-3 text-white transition sm:mt-0 sm:w-16"
-            aria-label="Create Event"
+            :aria-label="$t('create_event')"
           >
              <svg v-if="isLoading" class="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1248,16 +1250,16 @@ onUnmounted(() => {
             <input
               v-model="searchQuery"
               type="search"
-              placeholder="Zoek events..."
+              :placeholder="$t('search_events_placeholder')"
               class="agenda-input min-w-0 flex-1 rounded-md border px-3 py-2 text-sm transition"
             />
             <div class="flex flex-shrink-0 items-center gap-1">
               <template v-if="currentView === 'list' && !searchQuery.trim()">
-                <button @click="navigateList('prev')" class="mini-cal-toggle-btn rounded-md border p-1.5 transition" title="Vorige week">
+                <button @click="navigateList('prev')" class="mini-cal-toggle-btn rounded-md border p-1.5 transition" :title="$t('previous_week')">
                   <ChevronLeftIcon class="h-3.5 w-3.5" />
                 </button>
-                <button @click="goToToday()" class="mini-cal-toggle-btn rounded-md border px-2.5 py-1.5 text-xs transition">Vandaag</button>
-                <button @click="navigateList('next')" class="mini-cal-toggle-btn rounded-md border p-1.5 transition" title="Volgende week">
+                <button @click="goToToday()" class="mini-cal-toggle-btn rounded-md border px-2.5 py-1.5 text-xs transition">{{ $t('today') }}</button>
+                <button @click="navigateList('next')" class="mini-cal-toggle-btn rounded-md border p-1.5 transition" :title="$t('next_week')">
                   <ChevronRightIcon class="h-3.5 w-3.5" />
                 </button>
                 <span class="hidden whitespace-nowrap text-xs text-muted-foreground sm:inline">{{ listViewDateRange }}</span>
@@ -1266,7 +1268,7 @@ onUnmounted(() => {
                 @click="showMiniCalendar = !showMiniCalendar"
                 class="mini-cal-toggle-btn rounded-md border p-1.5 transition"
                 :class="showMiniCalendar ? 'mini-cal-toggle-active' : ''"
-                title="Datum selecteren"
+                :title="$t('select_date')"
               >
                 <CalendarDaysIcon class="h-3.5 w-3.5" />
               </button>
@@ -1276,7 +1278,7 @@ onUnmounted(() => {
             <MiniCalendar :selectedDate="currentDate" :events="authStore.upcomingEvents" @select="handleMiniCalSelect" />
           </div>
           <div v-if="searchQuery.trim() && searchResults.length > 0" class="mt-3 space-y-1">
-            <p class="mb-2 text-xs text-muted-foreground">{{ searchResults.length }} resultaat{{ searchResults.length !== 1 ? 'en' : '' }}</p>
+            <p class="mb-2 text-xs text-muted-foreground">{{ $t('search_results_count', { count: searchResults.length }, searchResults.length) }}</p>
             <ul class="space-y-1">
               <li
                 v-for="event in searchResults"
@@ -1298,7 +1300,7 @@ onUnmounted(() => {
             </ul>
           </div>
           <div v-else-if="searchQuery.trim() && searchResults.length === 0" class="mt-3 text-sm text-muted-foreground">
-            Geen events gevonden.
+            {{ $t('no_events_found') }}
           </div>
         </div>
 
@@ -1306,14 +1308,14 @@ onUnmounted(() => {
         <div v-if="currentView === 'list' && !searchQuery.trim()" class="mt-6 border-t border-border/70 pt-6">
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
             <CalendarDaysIcon class="mr-2 h-6 w-6 text-muted-foreground" />
-            Upcoming Events
+            {{ $t('upcoming_events') }}
           </h2>
           <div v-if="authStore.isFetchingEvents" class="mb-4 space-y-1.5">
             <p class="text-xs text-muted-foreground">
               <span v-if="authStore.fetchProgress && authStore.fetchProgress.total > 0">
-                Agenda's laden ({{ authStore.fetchProgress.current }}/{{ authStore.fetchProgress.total }})...
+                {{ $t('loading_calendars', { current: authStore.fetchProgress.current, total: authStore.fetchProgress.total }) }}
               </span>
-              <span v-else>Agenda's ophalen...</span>
+              <span v-else>{{ $t('fetching_calendars') }}</span>
             </p>
             <div class="fetch-progress-track rounded-full">
               <div
@@ -1349,10 +1351,10 @@ onUnmounted(() => {
                 >
                   <div class="flex items-start space-x-2">
                     <p v-if="isAllDayEvent(event)" class="event-all-day-label flex-shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold">
-                      All day
+                      {{ $t('all_day') }}
                     </p>
                     <p v-else class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
-                      {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
+                      {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : $t('all_day') }}
                     </p>
                     <div>
                       <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
@@ -1364,7 +1366,7 @@ onUnmounted(() => {
             </div>
           </div>
           <div v-else class="rounded-md border-2 border-dashed border-border/70 p-4 text-center text-muted-foreground">
-            <p>No upcoming events found.</p>
+            <p>{{ $t('no_upcoming_events') }}</p>
           </div>
         </div>
         <!-- Week View -->
@@ -1396,7 +1398,7 @@ onUnmounted(() => {
         <div v-if="todoStore.todos.length > 0" class="mt-8 border-t border-border/70 pt-6">
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
             <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
-            My Todos
+            {{ $t('my_todos') }}
           </h2>
           <ul class="space-y-1.5">
             <li
@@ -1408,7 +1410,7 @@ onUnmounted(() => {
                 class="todo-checkbox-btn flex flex-shrink-0 items-center justify-center rounded-full transition-all duration-200"
                 :class="todo.completed ? 'todo-checkbox-checked' : 'todo-checkbox-unchecked'"
                 @click="todoStore.toggleTodo(todo.id)"
-                :aria-label="todo.completed ? 'Mark incomplete' : 'Mark complete'"
+                :aria-label="todo.completed ? $t('mark_incomplete') : $t('mark_complete')"
               >
                 <svg v-if="todo.completed" class="h-3 w-3" viewBox="0 0 12 12" fill="none">
                   <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1421,7 +1423,7 @@ onUnmounted(() => {
               <button
                 @click="todoStore.removeTodo(todo.id)"
                 class="todo-delete-btn flex-shrink-0 rounded-full p-1 transition"
-                aria-label="Delete todo"
+                :aria-label="$t('delete_todo')"
               >
                 <TrashIcon class="h-4 w-4" />
               </button>
@@ -1432,13 +1434,13 @@ onUnmounted(() => {
         <div v-else class="py-12 text-center">
         <!-- <h2 class="text-xl font-semibold mb-4 dark:text-white">Welcome to Natural Agenda</h2> -->
         <p class="mb-6 text-muted-foreground">
-          Please log in with your Google account to connect your calendar and see your events.
+          {{ $t('login_message') }}
         </p>
         <button
           @click="handleLogin"
           class="agenda-create-button mx-auto flex items-center justify-center rounded-md px-6 py-3 text-white transition"
         >
-          Login with Google
+          {{ $t('login_with_google') }}
         </button>
         </div>
       </div>
@@ -1447,34 +1449,34 @@ onUnmounted(() => {
           <button
             @click="closeEventModal"
             class="modal-close-button absolute right-3 top-3 rounded-full p-1 transition"
-            aria-label="Close edit modal"
+            :aria-label="$t('close')"
           >
             <XMarkIcon class="h-5 w-5" />
           </button>
-          <h3 class="text-lg font-semibold text-card-foreground">Edit event</h3>
+          <h3 class="text-lg font-semibold text-card-foreground">{{ $t('edit_event') }}</h3>
           <div class="mt-4 space-y-4">
             <div class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="event-edit-summary">Title</label>
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-summary">{{ $t('title') }}</label>
               <input
                 id="event-edit-summary"
                 v-model="editSummary"
                 type="text"
                 class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
-                placeholder="Event title"
+                :placeholder="$t('event_title_placeholder')"
               />
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="event-edit-location">Location</label>
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-location">{{ $t('location') }}</label>
               <input
                 id="event-edit-location"
                 v-model="editLocation"
                 type="text"
                 class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
-                placeholder="Location"
+                :placeholder="$t('location_optional_placeholder')"
               />
             </div>
             <div v-if="availableCalendarsForEdit.length > 1" class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="event-edit-calendar">Calendar</label>
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-calendar">{{ $t('calendar_label') }}</label>
               <select
                 id="event-edit-calendar"
                 v-model="editCalendarId"
@@ -1486,7 +1488,7 @@ onUnmounted(() => {
               </select>
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="event-edit-date">Date</label>
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-date">{{ $t('date') }}</label>
               <Litepicker
                 id="event-edit-date"
                 v-model="editDate"
@@ -1495,11 +1497,11 @@ onUnmounted(() => {
             </div>
             <label class="flex items-center gap-2 text-sm text-card-foreground">
               <input v-model="editIsAllDay" type="checkbox" class="h-4 w-4 rounded border-border/70" />
-              All day
+              {{ $t('all_day') }}
             </label>
             <div v-if="!editIsAllDay" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div class="space-y-2">
-                <label class="text-sm font-medium text-card-foreground" for="event-edit-start-time">Start time</label>
+                <label class="text-sm font-medium text-card-foreground" for="event-edit-start-time">{{ $t('start_time') }}</label>
                 <input
                   id="event-edit-start-time"
                   v-model="editStartTime"
@@ -1508,7 +1510,7 @@ onUnmounted(() => {
                 />
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium text-card-foreground" for="event-edit-end-time">End time</label>
+                <label class="text-sm font-medium text-card-foreground" for="event-edit-end-time">{{ $t('end_time') }}</label>
                 <input
                   id="event-edit-end-time"
                   v-model="editEndTime"
@@ -1524,7 +1526,7 @@ onUnmounted(() => {
               :disabled="isLoading"
               class="event-modal-delete rounded-md border px-4 py-2 text-sm font-medium transition"
             >
-              Delete
+              {{ $t('delete') }}
             </button>
             <div class="flex flex-col gap-2 sm:flex-row">
               <button
@@ -1532,14 +1534,14 @@ onUnmounted(() => {
                 :disabled="isLoading"
                 class="event-modal-cancel rounded-md border px-4 py-2 text-sm font-medium transition"
               >
-                Cancel
+                {{ $t('cancel') }}
               </button>
               <button
                 @click="saveSelectedEvent"
                 :disabled="isLoading"
                 class="agenda-create-button rounded-md px-4 py-2 text-sm font-medium text-white transition"
               >
-                Save
+                {{ $t('save') }}
               </button>
             </div>
           </div>
@@ -1550,13 +1552,13 @@ onUnmounted(() => {
           <button
             @click="closeCreateHelpModal"
             class="modal-close-button absolute right-3 top-3 rounded-full p-1 transition"
-            aria-label="Close help modal"
+            :aria-label="$t('close')"
           >
             <XMarkIcon class="h-5 w-5" />
           </button>
-          <h3 class="text-lg font-semibold text-card-foreground">Input help</h3>
+          <h3 class="text-lg font-semibold text-card-foreground">{{ $t('input_help') }}</h3>
           <p class="mt-3 text-sm text-muted-foreground">
-            You can type natural language in the input field. Examples:
+            {{ $t('input_help_intro') }}
           </p>
           <ul class="mt-3 space-y-2 text-sm text-card-foreground">
             <li><span class="font-semibold">Simple all-day:</span> <code>testitem</code> (today, all day)</li>
@@ -1567,12 +1569,12 @@ onUnmounted(() => {
             <li><span class="font-semibold">Todo:</span> <code>todo melk kopen</code></li>
           </ul>
           <p class="mt-4 text-sm text-muted-foreground">
-            Tip: if no time is given but a date is recognized, the event is created with a default time. Use <code>all day</code> to force an all-day event.
+            {{ $t('input_help_tip') }}
           </p>
           <div class="mt-4 rounded-md border border-border/60 bg-card/40 p-3">
-            <p class="text-sm font-semibold text-card-foreground">Herhalende events</p>
+            <p class="text-sm font-semibold text-card-foreground">{{ $t('help_recurring_title') }}</p>
             <p class="mt-1 text-sm text-muted-foreground">
-              Voeg een herhalingspatroon toe aan je input:
+              {{ $t('help_recurring_intro') }}
             </p>
             <ul class="mt-2 space-y-1 text-sm text-card-foreground">
               <li><code>standup elke dag om 9u</code> — dagelijks</li>
@@ -1584,9 +1586,9 @@ onUnmounted(() => {
             </ul>
           </div>
           <div class="mt-3 rounded-md border border-border/60 bg-card/40 p-3">
-            <p class="text-sm font-semibold text-card-foreground">Agenda kiezen via <code>/</code></p>
+            <p class="text-sm font-semibold text-card-foreground">{{ $t('help_calendar_title') }}</p>
             <p class="mt-1 text-sm text-muted-foreground">
-              Voeg <code>/agendanaam</code> toe aan het einde van je input om het event rechtstreeks aan een specifieke agenda toe te voegen. Een gedeeltelijke naam volstaat.
+              {{ $t('help_calendar_intro') }}
             </p>
             <ul class="mt-2 space-y-1 text-sm text-card-foreground">
               <li><code>meeting at 14:30 tomorrow /work</code></li>
@@ -1599,7 +1601,7 @@ onUnmounted(() => {
               @click="closeCreateHelpModal"
               class="event-modal-cancel rounded-md border px-4 py-2 text-sm font-medium transition"
             >
-              Close
+              {{ $t('close') }}
             </button>
           </div>
         </div>
@@ -1610,36 +1612,36 @@ onUnmounted(() => {
           <button
             @click="closeNewEventModal"
             class="modal-close-button absolute right-3 top-3 rounded-full p-1 transition"
-            aria-label="Close create modal"
+            :aria-label="$t('close')"
           >
             <XMarkIcon class="h-5 w-5" />
           </button>
-          <h3 class="text-lg font-semibold text-card-foreground">Nieuw event</h3>
+          <h3 class="text-lg font-semibold text-card-foreground">{{ $t('new_event') }}</h3>
           <div class="mt-4 space-y-4">
             <div class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="new-event-summary">Titel</label>
+              <label class="text-sm font-medium text-card-foreground" for="new-event-summary">{{ $t('title') }}</label>
               <input
                 id="new-event-summary"
                 v-model="newEventSummary"
                 type="text"
                 class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
-                placeholder="Event titel"
+                :placeholder="$t('event_title_placeholder')"
                 autofocus
                 @keyup.enter="submitNewEvent"
               />
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="new-event-location">Locatie</label>
+              <label class="text-sm font-medium text-card-foreground" for="new-event-location">{{ $t('location') }}</label>
               <input
                 id="new-event-location"
                 v-model="newEventLocation"
                 type="text"
                 class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
-                placeholder="Locatie (optioneel)"
+                :placeholder="$t('location_optional_placeholder')"
               />
             </div>
             <div v-if="availableCalendarsForCreate.length > 1" class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="new-event-calendar">Agenda</label>
+              <label class="text-sm font-medium text-card-foreground" for="new-event-calendar">{{ $t('calendar_label') }}</label>
               <select
                 id="new-event-calendar"
                 v-model="newEventCalendarId"
@@ -1651,7 +1653,7 @@ onUnmounted(() => {
               </select>
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium text-card-foreground" for="new-event-date">Datum</label>
+              <label class="text-sm font-medium text-card-foreground" for="new-event-date">{{ $t('date') }}</label>
               <Litepicker
                 id="new-event-date"
                 v-model="newEventDate"
@@ -1660,11 +1662,11 @@ onUnmounted(() => {
             </div>
             <label class="flex items-center gap-2 text-sm text-card-foreground">
               <input v-model="newEventIsAllDay" type="checkbox" class="h-4 w-4 rounded border-border/70" />
-              Hele dag
+              {{ $t('all_day') }}
             </label>
             <div v-if="!newEventIsAllDay" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div class="space-y-2">
-                <label class="text-sm font-medium text-card-foreground" for="new-event-start-time">Begintijd</label>
+                <label class="text-sm font-medium text-card-foreground" for="new-event-start-time">{{ $t('start_time') }}</label>
                 <input
                   id="new-event-start-time"
                   v-model="newEventStartTime"
@@ -1673,7 +1675,7 @@ onUnmounted(() => {
                 />
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-medium text-card-foreground" for="new-event-end-time">Eindtijd</label>
+                <label class="text-sm font-medium text-card-foreground" for="new-event-end-time">{{ $t('end_time') }}</label>
                 <input
                   id="new-event-end-time"
                   v-model="newEventEndTime"
@@ -1689,15 +1691,15 @@ onUnmounted(() => {
               :disabled="isLoading"
               class="event-modal-cancel rounded-md border px-4 py-2 text-sm font-medium transition"
             >
-              Annuleren
+              {{ $t('cancel') }}
             </button>
             <button
               @click="submitNewEvent"
               :disabled="isLoading"
               class="agenda-create-button rounded-md px-4 py-2 text-sm font-medium text-white transition"
             >
-              <span v-if="isLoading">Bezig...</span>
-              <span v-else>Aanmaken</span>
+              <span v-if="isLoading">{{ $t('creating') }}</span>
+              <span v-else>{{ $t('create') }}</span>
             </button>
           </div>
         </div>

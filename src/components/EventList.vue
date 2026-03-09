@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TrashIcon, PencilIcon } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t, locale } = useI18n()
 const store = useCalendarStore()
 
 const emit = defineEmits(['editEvent'])
@@ -25,7 +27,7 @@ const groupedEvents = computed(() => {
         const year = start.getFullYear();
         const month = start.getMonth();
         const key = `${year}-${month}`;
-        const label = new Date(year, month, 1).toLocaleString('nl-NL', {
+        const label = new Date(year, month, 1).toLocaleString(locale.value, {
             month: 'long',
             year: 'numeric',
         });
@@ -44,7 +46,7 @@ const groupedEvents = computed(() => {
 });
 
 function deleteEvent(id: string) {
-    if (confirm('Weet je zeker dat je dit evenement wilt verwijderen?')) {
+    if (confirm(t('delete_event_confirm'))) {
         store.removeEvent(id)
     }
 }
@@ -55,8 +57,8 @@ function editEvent(event: CalendarEvent) {
 }
 
 function formatEventDates(event: CalendarEvent): string {
-    const start = new Date(event.startDate).toLocaleDateString('nl-NL');
-    const end = new Date(event.endDate).toLocaleDateString('nl-NL');
+    const start = new Date(event.startDate).toLocaleDateString(locale.value);
+    const end = new Date(event.endDate).toLocaleDateString(locale.value);
     if (start === end) {
         return start;
     }
@@ -67,11 +69,11 @@ function formatEventDates(event: CalendarEvent): string {
 <template>
   <Card class="event-list-card">
     <CardHeader>
-      <CardTitle>Alle Evenementen</CardTitle>
+      <CardTitle>{{ $t('all_events') }}</CardTitle>
     </CardHeader>
     <CardContent>
       <div v-if="groupedEvents.length === 0" class="text-center text-muted-foreground">
-        Nog geen evenementen toegevoegd.
+        {{ $t('no_events_added') }}
       </div>
       <div class="space-y-4">
         <div v-for="group in groupedEvents" :key="group.key">

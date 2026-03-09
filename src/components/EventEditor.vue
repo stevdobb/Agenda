@@ -1,6 +1,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCalendarStore, type EventType, type CalendarEvent } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Litepicker from '@/components/Litepicker.vue'
 
+const { t } = useI18n()
 const store = useCalendarStore()
 const uiStore = useUiStore()
 
@@ -104,11 +106,11 @@ watch(dateRange, (newRange) => {
 
 function saveEvent() {
   if (!startDate.value || !endDate.value || !selectedType.value) {
-    uiStore.showAlert('Validatiefout', 'Vul alstublieft alle velden in.')
+    uiStore.showAlert(t('validation_error'), t('fill_all_fields'))
     return
   }
 
-  let eventType = store.eventTypes.find(t => t.name === selectedType.value)
+  let eventType = store.eventTypes.find(et => et.name === selectedType.value)
 
   if (isCreatingCustomType.value && customTypeName.value) {
      const newType: EventType = {
@@ -125,7 +127,7 @@ function saveEvent() {
   }
   
   if (!eventType) {
-    uiStore.showAlert('Fout', 'Geselecteerd evenemententype niet gevonden.')
+    uiStore.showAlert(t('error'), t('event_type_not_found'))
     return
   }
 
@@ -156,49 +158,49 @@ function saveEvent() {
 <template>
   <Card class="editor-card">
     <CardHeader>
-      <CardTitle>Evenement Toevoegen/Bewerken</CardTitle>
+      <CardTitle>{{ $t('add_edit_event') }}</CardTitle>
     </CardHeader>
     <CardContent>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="md:col-span-2 space-y-2">
-          <Label for="date-range">Datumbereik</Label>
+          <Label for="date-range">{{ $t('date_range') }}</Label>
           <Litepicker
             id="date-range"
             v-model="dateRange"
             :options="litepickerOptions"
-            placeholder="Selecteer een datumbereik"
+            :placeholder="$t('select_date_range')"
           />
         </div>
         <div class="md:col-span-2 space-y-2">
-          <Label for="event-type">Type Evenement</Label>
+          <Label for="event-type">{{ $t('event_type') }}</Label>
           <select id="event-type" v-model="selectedType" @change="isCreatingCustomType = selectedType === 'custom'" class="editor-select flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
             <option v-for="type in store.eventTypes" :key="type.name" :value="type.name">{{ type.name }}</option>
-            <option value="custom">-- Maak een Aangepast Type --</option>
+            <option value="custom">{{ $t('create_custom_type') }}</option>
           </select>
         </div>
         <div class="md:col-span-2 space-y-2">
-          <Label for="custom-name">Naam van je agenda item</Label>
-          <Input id="custom-name" type="text" v-model="customName" placeholder="Voer een aangepaste naam in (optioneel)" />
+          <Label for="custom-name">{{ $t('event_name') }}</Label>
+          <Input id="custom-name" type="text" v-model="customName" :placeholder="$t('event_name_placeholder')" />
         </div>
         <div v-if="selectedType && selectedType !== 'custom'" class="md:col-span-2 space-y-2">
-          <Label for="event-type-color">Kleur Evenemententype</Label>
+          <Label for="event-type-color">{{ $t('event_type_color') }}</Label>
           <Input type="color" id="event-type-color" v-model="selectedTypeColor" class="w-full h-10" />
         </div>
          <div v-if="isCreatingCustomType" class="md:col-span-2 grid grid-cols-1 gap-4">
           <div class="space-y-2">
-              <Label for="custom-type-name">Naam Aangepast Type</Label>
+              <Label for="custom-type-name">{{ $t('custom_type_name') }}</Label>
               <Input type="text" id="custom-type-name" v-model="customTypeName" />
           </div>
           <div class="space-y-2">
-              <Label for="custom-type-color">Kleur Aangepast Type</Label>
+              <Label for="custom-type-color">{{ $t('custom_type_color') }}</Label>
               <Input type="color" id="custom-type-color" v-model="customTypeColor" class="w-full h-10" />
           </div>
          </div>
       </div>
     </CardContent>
     <CardFooter class="flex justify-end gap-2">
-        <Button v-if="store.selectedEvent" variant="outline" @click="store.selectedEvent = null">Annuleren</Button>
-        <Button @click="saveEvent">{{ store.selectedEvent ? 'Evenement Bijwerken' : 'Evenement Opslaan' }}</Button>
+        <Button v-if="store.selectedEvent" variant="outline" @click="store.selectedEvent = null">{{ $t('cancel') }}</Button>
+        <Button @click="saveEvent">{{ store.selectedEvent ? $t('update_event') : $t('save_event') }}</Button>
     </CardFooter>
   </Card>
 </template>

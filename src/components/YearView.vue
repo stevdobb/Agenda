@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCalendarStore, type CalendarEvent } from '@/stores/calendar'
 
+const { locale } = useI18n()
 const store = useCalendarStore()
 
 const year = computed(() => new Date().getFullYear())
@@ -13,8 +15,17 @@ const schoolHolidayColor = computed(() => {
 const monthlyStats = computed(() => store.monthlyLeaveStats)
 
 function getMonthName(monthIndex: number) {
-  return new Date(year.value, monthIndex, 1).toLocaleString('nl-NL', { month: 'long' })
+  return new Date(year.value, monthIndex, 1).toLocaleString(locale.value, { month: 'long' })
 }
+
+const weekdayLabels = computed(() => {
+  const fmt = new Intl.DateTimeFormat(locale.value, { weekday: 'narrow' })
+  // Monday-first week: Mon=1, Tue=2, ..., Sun=0
+  return [1, 2, 3, 4, 5, 6, 0].map(d => {
+    const date = new Date(2024, 0, d + 7)
+    return fmt.format(date)
+  })
+})
 
 function getDaysInMonth(monthIndex: number) {
   return new Date(year.value, monthIndex + 1, 0).getDate()
@@ -150,12 +161,12 @@ function getEventTextStyle(event: CalendarEvent) {
       <h3 class="month-title mb-3 text-center text-lg font-bold capitalize">{{ getMonthName(month) }}</h3>
       
       <div v-if="monthlyStats[month] > 0" class="month-meta mb-2 text-center text-xs">
-        <span>Gebruikt: {{ monthlyStats[month] }}</span>
+        <span>{{ $t('used') }}{{ monthlyStats[month] }}</span>
       </div>
       
       <!-- Calendar Grid -->
       <div class="month-grid mb-4 grid grid-cols-7 gap-1 text-center text-xs">
-        <div v-for="day in ['M','D','W','D','V','Z','Z']" :key="day" class="weekday-label font-bold">{{ day }}</div>
+        <div v-for="(day, i) in weekdayLabels" :key="i" class="weekday-label font-bold">{{ day }}</div>
         <div v-for="blank in getFirstDayOfMonth(month)" :key="`blank-${blank}`"></div>
         <div 
           v-for="day in getDaysInMonth(month)" 

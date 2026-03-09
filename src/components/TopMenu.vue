@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CalendarDays, CalendarRange, CheckSquare, LayoutGrid, List, Menu, RefreshCcw, Settings2, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   currentView: string
@@ -22,11 +25,11 @@ type BeforeInstallPromptEvent = Event & {
 let deferredPrompt: BeforeInstallPromptEvent | null = null
 
 const viewItems = [
-  { key: 'list', label: 'List', icon: List },
-  { key: 'week', label: 'Week', icon: CalendarRange },
-  { key: 'month', label: 'Month', icon: CalendarDays, mobileHidden: true },
-  { key: 'todos', label: 'Todos', icon: CheckSquare },
-  { key: 'year', label: 'Year', icon: LayoutGrid },
+  { key: 'list', icon: List },
+  { key: 'week', icon: CalendarRange },
+  { key: 'month', icon: CalendarDays, mobileHidden: true },
+  { key: 'todos', icon: CheckSquare },
+  { key: 'year', icon: LayoutGrid },
 ]
 
 const mobileViewItems = viewItems.filter(item => !item.mobileHidden)
@@ -110,7 +113,7 @@ onBeforeUnmount(() => {
               size="icon"
               variant="secondary"
               class="md:hidden border border-border/70"
-              :aria-label="mobileMenuOpen ? 'Menu sluiten' : 'Menu openen'"
+              :aria-label="mobileMenuOpen ? t('close_menu') : t('open_menu')"
               :aria-expanded="mobileMenuOpen"
               @click="mobileMenuOpen = !mobileMenuOpen"
             >
@@ -129,7 +132,7 @@ onBeforeUnmount(() => {
               @click="emit('update:view', item.key)"
             >
               <component :is="item.icon" class="h-4 w-4" />
-              {{ item.label }}
+              {{ t(item.key) }}
             </Button>
           </div>
 
@@ -141,12 +144,12 @@ onBeforeUnmount(() => {
               size="sm"
               class="border-border/80"
             >
-              Installeer App
+              {{ t('install_app') }}
             </Button>
-            <Button v-if="props.showRefresh" @click="emit('refresh')" variant="outline" size="icon" class="border-border/80" aria-label="Refresh Events">
+            <Button v-if="props.showRefresh" @click="emit('refresh')" variant="outline" size="icon" class="border-border/80" :aria-label="t('refresh')">
               <RefreshCcw class="h-4 w-4" />
             </Button>
-            <Button v-if="props.showSettings" @click="emit('openSettings')" variant="outline" size="icon" class="border-border/80" aria-label="Open instellingen">
+            <Button v-if="props.showSettings" @click="emit('openSettings')" variant="outline" size="icon" class="border-border/80" :aria-label="t('settings')">
               <Settings2 class="h-4 w-4" />
             </Button>
           </div>
@@ -171,21 +174,21 @@ onBeforeUnmount(() => {
                 @click="selectView(item.key)"
               >
                 <component :is="item.icon" class="h-4 w-4" />
-                {{ item.label }}
+                {{ t(item.key) }}
               </Button>
             </div>
 
             <div v-if="showInstallButton || props.showRefresh || props.showSettings" class="mt-3 flex items-center gap-2">
               <Button v-if="showInstallButton" @click="installPwa" variant="outline" class="flex-1 border-border/80">
-                Installeer App
+                {{ t('install_app') }}
               </Button>
               <Button v-if="props.showRefresh" @click="triggerRefresh" variant="outline" class="flex-1 border-border/80">
                 <RefreshCcw class="h-4 w-4" />
-                Refresh
+                {{ t('refresh') }}
               </Button>
               <Button v-if="props.showSettings" @click="triggerSettings" variant="outline" class="flex-1 border-border/80">
                 <Settings2 class="h-4 w-4" />
-                Settings
+                {{ t('settings') }}
               </Button>
             </div>
           </div>
@@ -196,7 +199,7 @@ onBeforeUnmount(() => {
     <button
       v-if="mobileMenuOpen"
       class="fixed inset-0 z-40 bg-black/20 md:hidden"
-      aria-label="Sluit menu"
+      :aria-label="t('close_menu')"
       @click="mobileMenuOpen = false"
     />
   </nav>

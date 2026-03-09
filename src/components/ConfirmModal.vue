@@ -24,7 +24,7 @@ const emit = defineEmits(['confirm', 'cancel'])
       <button
         @click="emit('cancel')"
         class="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-secondary/60 hover:text-foreground"
-        aria-label="Close modal"
+        :aria-label="$t('close')"
       >
         <XMarkIcon class="h-5 w-5" />
       </button>
@@ -33,8 +33,8 @@ const emit = defineEmits(['confirm', 'cancel'])
         <CardDescription>{{ description }}</CardDescription>
       </CardHeader>
       <CardFooter class="flex justify-end gap-4">
-        <Button variant="outline" @click="emit('cancel')">Cancel</Button>
-        <Button @click="emit('confirm')">Confirm</Button>
+        <Button variant="outline" @click="emit('cancel')">{{ $t('cancel') }}</Button>
+        <Button @click="emit('confirm')">{{ $t('confirm') }}</Button>
       </CardFooter>
     </Card>
   </div>

@@ -15,6 +15,7 @@
     "@headlessui/vue": "^1.7.22",
     "@heroicons/vue": "^2.1.3",
     "@tanstack/vue-table": "^8.21.3",
+    "@vueuse/core": "^14.2.1",
     "chrono-node": "^2.7.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -28,6 +29,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
     "vue": "^3.4.27",
+    "vue-i18n": "^11.3.0",
     "vue-router": "^4.3.2"
   },
   "devDependencies": {

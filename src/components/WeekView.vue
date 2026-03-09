@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineProps, computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
 import { Button } from '@/components/ui/button'
 
@@ -8,6 +9,8 @@ const props = defineProps<{
   events: any[],
   is24HourFormat: boolean
 }>()
+
+const { t } = useI18n()
 
 const emit = defineEmits(['update:currentDate', 'eventClicked', 'eventMoved'])
 
@@ -47,7 +50,7 @@ function toLocalDateKey(date: Date) {
 
 // Helper to format date and time
 function formatEventTime(dateTime: string) {
-  if (!dateTime) return 'All day';
+  if (!dateTime) return t('all_day');
   return new Date(dateTime).toLocaleString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
@@ -149,7 +152,7 @@ function getEventRenderKey(event: any) {
       </Button>
     </div>
     <div class="mb-4 flex justify-center">
-      <Button @click="goToToday" class="week-today-button">Today</Button>
+      <Button @click="goToToday" class="week-today-button">{{ $t('today') }}</Button>
     </div>
 
     <!-- Week Days and Events -->
@@ -181,13 +184,13 @@ function getEventRenderKey(event: any) {
                 @click="emit('eventClicked', event)"
               >
                 <p class="event-chip-time text-xs font-semibold text-muted-foreground">
-                  {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
+                  {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : $t('all_day') }}
                 </p>
                 <p class="event-chip-title font-semibold text-card-foreground">{{ event.summary }}</p>
               </li>
             </ul>
           </div>
-          <div v-else class="pt-1 text-center text-xs text-muted-foreground">No events</div>
+          <div v-else class="pt-1 text-center text-xs text-muted-foreground">{{ $t('no_events') }}</div>
         </div>
       </div>
     </div>
