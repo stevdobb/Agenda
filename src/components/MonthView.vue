@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, computed } from 'vue'
+import { defineProps, computed, ref } from 'vue'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
 import { Button } from '@/components/ui/button'
 
@@ -9,7 +9,32 @@ const props = defineProps<{
   is24HourFormat: boolean
 }>()
 
-const emit = defineEmits(['update:currentDate', 'dayClicked', 'eventClicked'])
+const emit = defineEmits(['update:currentDate', 'dayClicked', 'eventClicked', 'eventMoved'])
+
+const draggedEvent = ref<any>(null)
+const dragOverDate = ref<string | null>(null)
+
+function onDragStart(event: DragEvent, calEvent: any) {
+  draggedEvent.value = calEvent
+  event.dataTransfer?.setData('text/plain', calEvent.id)
+}
+
+function onDragOver(event: DragEvent, day: Date) {
+  event.preventDefault()
+  dragOverDate.value = toLocalDateKey(day)
+}
+
+function onDragLeave() {
+  dragOverDate.value = null
+}
+
+function onDrop(event: DragEvent, day: Date) {
+  event.preventDefault()
+  dragOverDate.value = null
+  if (!draggedEvent.value) return
+  emit('eventMoved', draggedEvent.value, day)
+  draggedEvent.value = null
+}
 
 function toLocalDateKey(date: Date) {
   const year = date.getFullYear()
@@ -156,18 +181,25 @@ function getEventRenderKey(event: any) {
         v-for="(day, index) in calendarDays"
         :key="index"
         :class="[
-          'day-cell relative rounded-md border p-1',
+          'day-cell relative rounded-md border p-1 transition-colors',
           day ? 'cursor-pointer border-border/70' : 'day-cell-empty border-border/50',
-          isToday(day) ? 'day-cell-today border-primary/70' : ''
+          isToday(day) ? 'day-cell-today border-primary/70' : '',
+          day && dragOverDate === toLocalDateKey(day) ? 'day-cell-drag-over' : ''
         ]"
         @click="day && emit('dayClicked', day)"
+        @dragover="day && onDragOver($event, day)"
+        @dragleave="onDragLeave"
+        @drop="day && onDrop($event, day)"
       >
         <div v-if="day" class="text-right text-xs font-semibold" :class="isToday(day) ? 'text-primary' : 'text-card-foreground'">
           {{ day.getDate() }}
         </div>
         <div v-if="day && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
           <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="getEventRenderKey(event)"
-             class="month-event-chip cursor-pointer truncate rounded-sm px-1 py-0.5 text-card-foreground transition hover:border-primary/70"
+             class="month-event-chip cursor-grab truncate rounded-sm py-0.5 pr-1 text-card-foreground transition hover:border-primary/70"
+             draggable="true"
+             @dragstart="onDragStart($event, event)"
+             :style="event.calendarColor ? { borderLeftColor: event.calendarColor, borderLeftWidth: '3px', paddingLeft: '4px' } : { paddingLeft: '4px' }"
              @click.stop="emit('eventClicked', event)"
           >
             {{ formatEventTime(event.start.dateTime) }} {{ event.summary }}
@@ -199,5 +231,10 @@ function getEventRenderKey(event: any) {
 
 .month-today-button {
   border: 1px solid hsl(var(--border) / 0.65);
+}
+
+.day-cell-drag-over {
+  background-color: hsl(var(--primary) / 0.15);
+  border-color: hsl(var(--primary) / 0.6) !important;
 }
 </style>

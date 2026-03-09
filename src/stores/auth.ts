@@ -88,6 +88,11 @@ function checkDarkMode() {
       return;
     }
 
+    if (!navigator.onLine) {
+      console.log('AuthStore: Offline — using cached events from last fetch.');
+      return;
+    }
+
     try {
       isFetchingEvents.value = true;
       fetchProgress.value = { current: 0, total: 0 };
@@ -160,6 +165,7 @@ function checkDarkMode() {
                   calendarId: calendar.id,
                   calendarSummary: calendar.summary,
                   calendarPrimary: Boolean(calendar.primary),
+                  calendarColor: calendar.backgroundColor ?? null,
                 }));
               } catch (calendarError) {
                 fetchProgress.value!.current++;

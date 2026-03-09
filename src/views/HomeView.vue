@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
@@ -8,7 +8,8 @@ import WeekView from '@/components/WeekView.vue'
 import MonthView from '@/components/MonthView.vue'
 import Litepicker from '@/components/Litepicker.vue'
 import TopMenu from '@/components/TopMenu.vue'
-import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
+import MiniCalendar from '@/components/MiniCalendar.vue'
 import chrono from '@/services/customChrono'
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
@@ -28,12 +29,26 @@ const currentDate = ref(new Date()) // State for current date (for week/month vi
 const tokenRefreshBufferMs = 30 * 1000
 const showEventModal = ref(false)
 const showCreateHelpModal = ref(false)
+const searchQuery = ref('')
+const showMiniCalendar = ref(false)
+const showNewEventModal = ref(false)
+const newEventSummary = ref('')
+const newEventDate = ref('')
+const newEventStartTime = ref('09:00')
+const newEventEndTime = ref('10:00')
+const newEventIsAllDay = ref(false)
+const newEventLocation = ref('')
+const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
+const notificationPermission = ref<NotificationPermission>(
+  typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+)
 const selectedEvent = ref<GoogleCalendarEvent | null>(null)
 const editSummary = ref('')
 const editDate = ref('')
 const editStartTime = ref('09:00')
 const editEndTime = ref('10:00')
 const editIsAllDay = ref(false)
+const editLocation = ref('')
 const singleDateLitepickerOptions = {
   singleMode: true,
   autoApply: true,
@@ -86,12 +101,11 @@ function getFetchRangeForView(view: 'list' | 'week' | 'month', date: Date) {
   // console.log('getFetchRangeForView: Input - view:', view, 'date:', date); // Debug log
   let fetchStart: Date;
   let fetchEnd: Date;
-  const today = new Date();
 
   if (view === 'list') {
-    fetchStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    fetchStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     fetchStart.setHours(0, 0, 0, 0);
-    fetchEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
+    fetchEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 7);
   } else if (view === 'week') {
     const startOfWeek = new Date(date);
     startOfWeek.setDate(date.getDate() - date.getDay() + (date.getDay() === 0 ? -6 : 1));
@@ -228,6 +242,61 @@ function extractTimeFromInput(input: string) {
   return null;
 }
 
+function extractDuration(input: string): { minutes: number; matchText: string } | null {
+  const patterns: [RegExp, (m: RegExpMatchArray) => number][] = [
+    [/\b(\d+)u(\d+)\b/i, (m) => parseInt(m[1]) * 60 + parseInt(m[2])],
+    [/\b(\d+(?:[.,]\d+)?)\s*uur\b/i, (m) => Math.round(parseFloat(m[1].replace(',', '.')) * 60)],
+    [/\b(\d+(?:[.,]\d+)?)\s*u\b/i, (m) => Math.round(parseFloat(m[1].replace(',', '.')) * 60)],
+    [/\b(\d+(?:[.,]\d+)?)\s*h\b/i, (m) => Math.round(parseFloat(m[1].replace(',', '.')) * 60)],
+    [/\b(\d+)\s*min(?:uten?)?\b/i, (m) => parseInt(m[1])],
+  ]
+  for (const [pattern, calc] of patterns) {
+    const match = input.match(pattern)
+    if (!match) continue
+    const minutes = calc(match)
+    if (minutes > 0 && minutes <= 24 * 60) {
+      return { minutes, matchText: match[0] }
+    }
+  }
+  return null
+}
+
+function extractLocation(input: string): { location: string; matchText: string } | null {
+  const match = input.match(/\bbij\s+([^,]+?)(?=\s+(?:om|at|op|morgen|tomorrow|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d)|$)/i)
+  if (!match || !match[1]?.trim()) return null
+  return { location: match[1].trim(), matchText: match[0] }
+}
+
+function extractRecurrence(input: string): { rrule: string; matchText: string } | null {
+  const dayMap: Record<string, string> = {
+    maandag: 'MO', monday: 'MO',
+    dinsdag: 'TU', tuesday: 'TU',
+    woensdag: 'WE', wednesday: 'WE',
+    donderdag: 'TH', thursday: 'TH',
+    vrijdag: 'FR', friday: 'FR',
+    zaterdag: 'SA', saturday: 'SA',
+    zondag: 'SU', sunday: 'SU',
+  }
+  const dayPattern = Object.keys(dayMap).join('|')
+  const dayMatch = input.match(new RegExp(`\\belke\\s+(${dayPattern})\\b`, 'i'))
+  if (dayMatch) {
+    const day = dayMap[dayMatch[1].toLowerCase()]
+    return { rrule: `RRULE:FREQ=WEEKLY;BYDAY=${day}`, matchText: dayMatch[0] }
+  }
+  const freqPatterns: [RegExp, string][] = [
+    [/\b(elke\s+dag|dagelijks)\b/i, 'RRULE:FREQ=DAILY'],
+    [/\b(elke\s+week|wekelijks)\b/i, 'RRULE:FREQ=WEEKLY'],
+    [/\b(elke\s+(?:2|twee)\s*weken?)\b/i, 'RRULE:FREQ=WEEKLY;INTERVAL=2'],
+    [/\b(elke\s+maand|maandelijks)\b/i, 'RRULE:FREQ=MONTHLY'],
+    [/\b(elk\s+jaar|jaarlijks)\b/i, 'RRULE:FREQ=YEARLY'],
+  ]
+  for (const [pattern, rrule] of freqPatterns) {
+    const match = input.match(pattern)
+    if (match) return { rrule, matchText: match[0] }
+  }
+  return null
+}
+
 function clearFeedback() {
   feedbackMessage.value = ''
   feedbackTone.value = null
@@ -362,6 +431,7 @@ function isAllDayEvent(event: GoogleCalendarEvent) {
 function openEventModal(event: GoogleCalendarEvent) {
   selectedEvent.value = event
   editSummary.value = event.summary ?? ''
+  editLocation.value = (event as any).location ?? ''
 
   if (event.start.dateTime) {
     const start = new Date(event.start.dateTime)
@@ -444,19 +514,17 @@ const groupedEvents = computed(() => {
 // New computed property for displayed events based on current view
 const displayedGroupedEvents = computed(() => {
   if (currentView.value === 'list') {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const sevenDaysLater = new Date(today);
-    sevenDaysLater.setDate(today.getDate() + 7);
-    sevenDaysLater.setHours(23, 59, 59, 999);
+    const startDate = new Date(currentDate.value);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 7);
+    endDate.setHours(23, 59, 59, 999);
 
     const filteredGroups: { date: string; events: any[] }[] = [];
     groupedEvents.value.forEach(dayGroup => {
-      // Create date from YYYY-MM-DD string, ensuring it's treated as local time midnight
       const parts = dayGroup.date.split('-').map(part => parseInt(part, 10));
       const groupDate = new Date(parts[0], parts[1] - 1, parts[2]);
-
-      if (groupDate >= today && groupDate <= sevenDaysLater) {
+      if (groupDate >= startDate && groupDate <= endDate) {
         filteredGroups.push(dayGroup);
       }
     });
@@ -466,6 +534,19 @@ const displayedGroupedEvents = computed(() => {
   // as the WeekView and MonthView components will handle their own filtering/display logic.
   return groupedEvents.value;
 });
+
+const searchResults = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return []
+  return (authStore.upcomingEvents as any[])
+    .filter(event => event.summary?.toLowerCase().includes(q) || event.location?.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const tA = a.start.dateTime ? new Date(a.start.dateTime).getTime() : new Date(a.start.date).getTime()
+      const tB = b.start.dateTime ? new Date(b.start.dateTime).getTime() : new Date(b.start.date).getTime()
+      return tA - tB
+    })
+    .slice(0, 20)
+})
 
 async function createEvent() {
   if (!eventText.value.trim() || isLoading.value) return;
@@ -493,10 +574,31 @@ async function createEvent() {
   // Otherwise, proceed as a calendar event
   try {
     const forceAllDay = /\b(all[\s-]?day|hele\s+dag)\b/i.test(input)
-    const normalizedInput = input
+    let normalizedInput = input
       .replace(/\b(all[\s-]?day|hele\s+dag)\b/gi, '')
       .replace(/\s{2,}/g, ' ')
       .trim()
+
+    // Extract location ("bij ...")
+    const locationMatch = extractLocation(normalizedInput)
+    const location = locationMatch?.location ?? null
+    if (locationMatch) {
+      normalizedInput = normalizedInput.replace(locationMatch.matchText, '').replace(/\s{2,}/g, ' ').trim()
+    }
+
+    // Extract recurrence ("elke maandag", "elke dag", ...)
+    const recurrenceMatch = extractRecurrence(normalizedInput)
+    const rrule = recurrenceMatch?.rrule ?? null
+    if (recurrenceMatch) {
+      normalizedInput = normalizedInput.replace(recurrenceMatch.matchText, '').replace(/\s{2,}/g, ' ').trim()
+    }
+
+    // Extract duration ("30min", "2u", ...)
+    const durationMatch = extractDuration(normalizedInput)
+    if (durationMatch) {
+      normalizedInput = normalizedInput.replace(durationMatch.matchText, '').replace(/\s{2,}/g, ' ').trim()
+    }
+
     const parsedResults = chrono.parse(normalizedInput, new Date(), { forwardDate: true })
     const extractedTime = extractTimeFromInput(normalizedInput)
     const timeMatch = forceAllDay ? null : extractedTime
@@ -516,7 +618,8 @@ async function createEvent() {
       if (!forceAllDay && timeMatch) {
         startDate = new Date();
         startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
-        endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+        const durationMs = (durationMatch?.minutes ?? 60) * 60 * 1000
+        endDate = new Date(startDate.getTime() + durationMs);
         if (startDate.getTime() <= Date.now()) {
           startDate.setDate(startDate.getDate() + 1)
           endDate.setDate(endDate.getDate() + 1)
@@ -557,12 +660,15 @@ async function createEvent() {
         allDayStartDate = toLocalDateKey(allDayStart)
         allDayEndDate = toLocalDateKey(exclusiveEnd)
       } else {
-        endDate = result.end ? result.end.date() : new Date(startDate.getTime() + 60 * 60 * 1000);
+        const durationMs = (durationMatch?.minutes ?? 60) * 60 * 1000
+        endDate = result.end ? result.end.date() : new Date(startDate.getTime() + durationMs);
         if (timeMatch && !result.start.isCertain('hour') && !result.start.isCertain('minute')) {
           startDate.setHours(timeMatch.hour, timeMatch.minute, 0, 0);
           if (!result.end || (!result.end.isCertain('hour') && !result.end.isCertain('minute'))) {
-            endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+            endDate = new Date(startDate.getTime() + durationMs);
           }
+        } else if (durationMatch && result.end == null) {
+          endDate = new Date(startDate.getTime() + durationMs);
         }
       }
     }
@@ -580,11 +686,15 @@ async function createEvent() {
           summary,
           start: { date: allDayStartDate },
           end: { date: allDayEndDate },
+          ...(location ? { location } : {}),
+          ...(rrule ? { recurrence: [rrule] } : {}),
         }
       : {
           summary,
           start: { dateTime: startDate!.toISOString(), timeZone },
           end: { dateTime: endDate!.toISOString(), timeZone },
+          ...(location ? { location } : {}),
+          ...(rrule ? { recurrence: [rrule] } : {}),
         };
 
     const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent); // Assuming this returns the created event
@@ -635,6 +745,7 @@ async function saveSelectedEvent() {
   try {
     let payload: {
       summary: string
+      location?: string
       start: { dateTime?: string | null; date?: string | null; timeZone?: string | null }
       end: { dateTime?: string | null; date?: string | null; timeZone?: string | null }
     }
@@ -678,6 +789,7 @@ async function saveSelectedEvent() {
       }
     }
 
+    payload.location = editLocation.value.trim() || undefined
     await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload)
     setFeedbackSuccess('Event successfully updated.')
     dismissEventModal()
@@ -729,6 +841,168 @@ async function deleteSelectedEvent() {
 function handleMonthDayClick(date: Date) {
   currentDate.value = date;
   currentView.value = 'list';
+}
+
+function navigateList(dir: 'prev' | 'next') {
+  const d = new Date(currentDate.value)
+  d.setDate(d.getDate() + (dir === 'prev' ? -7 : 7))
+  currentDate.value = d
+}
+
+function goToToday() {
+  currentDate.value = new Date()
+  showMiniCalendar.value = false
+}
+
+function handleMiniCalSelect(date: Date) {
+  currentDate.value = date
+  showMiniCalendar.value = false
+}
+
+function openNewEventModal(date?: Date) {
+  const d = date ?? currentDate.value
+  newEventDate.value = toLocalDateKey(d)
+  newEventSummary.value = ''
+  newEventStartTime.value = '09:00'
+  newEventEndTime.value = '10:00'
+  newEventIsAllDay.value = false
+  newEventLocation.value = ''
+  showNewEventModal.value = true
+}
+
+function closeNewEventModal() {
+  if (isLoading.value) return
+  showNewEventModal.value = false
+}
+
+async function submitNewEvent() {
+  const trimmedSummary = newEventSummary.value.trim()
+  if (!trimmedSummary) {
+    setFeedbackError('Error: Please provide a title for the event.')
+    return
+  }
+  if (!newEventDate.value) {
+    setFeedbackError('Error: Please select a date.')
+    return
+  }
+
+  isLoading.value = true
+  clearFeedback()
+
+  try {
+    const activeAccount = await ensureActiveAccessToken()
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+    let calendarEvent: any
+    let feedbackDate: Date
+
+    if (newEventIsAllDay.value) {
+      const localStartDate = parseDateKey(newEventDate.value)
+      if (!localStartDate) throw new Error('Invalid date.')
+      const localExclusiveEndDate = new Date(localStartDate)
+      localExclusiveEndDate.setDate(localExclusiveEndDate.getDate() + 1)
+      calendarEvent = {
+        summary: trimmedSummary,
+        start: { date: newEventDate.value },
+        end: { date: toLocalDateKey(localExclusiveEndDate) },
+        ...(newEventLocation.value.trim() ? { location: newEventLocation.value.trim() } : {}),
+      }
+      feedbackDate = localStartDate
+    } else {
+      const localDate = parseDateKey(newEventDate.value)
+      const startTime = parseTimeValue(newEventStartTime.value)
+      const endTime = parseTimeValue(newEventEndTime.value)
+      if (!localDate || !startTime || !endTime) throw new Error('Please provide a valid date and time.')
+
+      const startDateTime = new Date(localDate)
+      startDateTime.setHours(startTime.hour, startTime.minute, 0, 0)
+      const endDateTime = new Date(localDate)
+      endDateTime.setHours(endTime.hour, endTime.minute, 0, 0)
+      if (endDateTime.getTime() <= startDateTime.getTime()) throw new Error('End time must be after start time.')
+
+      calendarEvent = {
+        summary: trimmedSummary,
+        start: { dateTime: startDateTime.toISOString(), timeZone },
+        end: { dateTime: endDateTime.toISOString(), timeZone },
+        ...(newEventLocation.value.trim() ? { location: newEventLocation.value.trim() } : {}),
+      }
+      feedbackDate = startDateTime
+    }
+
+    const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent)
+    lastAddedEventId.value = createdEvent.id
+    const fb = newEventIsAllDay.value
+      ? getCreatedAllDayEventFeedback(trimmedSummary, feedbackDate)
+      : getCreatedEventFeedback(trimmedSummary, feedbackDate)
+    setFeedbackSuccess(fb.message, fb.useTodayStyle)
+    showNewEventModal.value = false
+    await refreshVisibleEvents()
+  } catch (error: any) {
+    setFeedbackError(`Error: ${error.message}`)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const listViewDateRange = computed(() => {
+  const start = new Date(currentDate.value)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 7)
+  const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return `${fmt(start)} – ${fmt(end)}`
+})
+
+async function handleEventMoved(event: GoogleCalendarEvent, newDate: Date) {
+  if (isLoading.value) return
+  isLoading.value = true
+  clearFeedback()
+
+  const eventAccountId = event.accountId ?? authStore.activeAccountId
+  const account = await ensureAccessTokenForAccount(eventAccountId).catch((error: any) => {
+    setFeedbackError(`Error: ${error.message}`)
+    return null
+  })
+  if (!account) {
+    isLoading.value = false
+    return
+  }
+
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+    let payload: any
+    if (event.start.date) {
+      // All-day event
+      const exclusiveEnd = new Date(newDate)
+      exclusiveEnd.setDate(exclusiveEnd.getDate() + 1)
+      payload = {
+        summary: event.summary ?? '',
+        start: { date: toLocalDateKey(newDate), dateTime: null, timeZone: null },
+        end: { date: toLocalDateKey(exclusiveEnd), dateTime: null, timeZone: null },
+      }
+    } else {
+      // Timed event — keep the same time, only change the date
+      const origStart = new Date(event.start.dateTime!)
+      const origEnd = event.end.dateTime ? new Date(event.end.dateTime) : new Date(origStart.getTime() + 60 * 60 * 1000)
+      const duration = origEnd.getTime() - origStart.getTime()
+      const newStart = new Date(newDate)
+      newStart.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0)
+      const newEnd = new Date(newStart.getTime() + duration)
+      payload = {
+        summary: event.summary ?? '',
+        start: { dateTime: newStart.toISOString(), timeZone, date: null },
+        end: { dateTime: newEnd.toISOString(), timeZone, date: null },
+      }
+    }
+
+    await updateCalendarEvent(account.accessToken, event.id, payload)
+    await refreshVisibleEvents()
+  } catch (error: any) {
+    setFeedbackError(`Error moving event: ${error.message}`)
+  } finally {
+    isLoading.value = false
+  }
 }
 
 async function manualFetchEvents() {
@@ -789,6 +1063,60 @@ function handleOpenSettings() {
 
   showSettingsModal.value = true
 }
+
+// --- Notifications ---
+let notificationInterval: ReturnType<typeof setInterval> | null = null
+const notifiedIds = new Set<string>(
+  JSON.parse(localStorage.getItem('notified_event_ids') ?? '[]')
+)
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return
+  const result = await Notification.requestPermission()
+  notificationPermission.value = result
+  if (result === 'granted') startNotificationCheck()
+}
+
+function startNotificationCheck() {
+  if (notificationInterval) return
+  checkUpcomingNotifications()
+  notificationInterval = setInterval(checkUpcomingNotifications, 60_000)
+}
+
+function checkUpcomingNotifications() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  const now = Date.now()
+  const windowMs = 15 * 60 * 1000
+  ;(authStore.upcomingEvents as any[]).forEach(event => {
+    if (!event.start.dateTime) return
+    const eventStart = new Date(event.start.dateTime).getTime()
+    const msBefore = eventStart - now
+    if (msBefore > 0 && msBefore <= windowMs) {
+      const notifKey = `${event.id}:${event.start.dateTime}`
+      if (!notifiedIds.has(notifKey)) {
+        notifiedIds.add(notifKey)
+        localStorage.setItem('notified_event_ids', JSON.stringify([...notifiedIds]))
+        const mins = Math.round(msBefore / 60_000)
+        new Notification(event.summary ?? 'Event', {
+          body: `Starts in ${mins} minute${mins !== 1 ? 's' : ''}`,
+          icon: '/pwa-192x192.png',
+        })
+      }
+    }
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('online', () => { isOnline.value = true })
+  window.addEventListener('offline', () => { isOnline.value = false })
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    startNotificationCheck()
+  }
+})
+
+onUnmounted(() => {
+  if (notificationInterval) clearInterval(notificationInterval)
+})
 </script>
 
 <template>
@@ -803,12 +1131,33 @@ function handleOpenSettings() {
         @openSettings="handleOpenSettings" 
       />
 
+      <!-- Offline Banner -->
+      <div v-if="!isOnline" class="offline-banner mb-4 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+        <span class="inline-block h-2 w-2 rounded-full bg-amber-400"></span>
+        Je bent offline. Gecachede events worden getoond.
+      </div>
+
       <div class="agenda-shell-panel rounded-lg border p-6 sm:p-7">
 
 
         <div v-if="authStore.isLoggedIn" class="mt-3">
+        <!-- Notification permission banner -->
+        <div v-if="notificationPermission === 'default'" class="notif-banner mb-4 flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+          <span class="text-card-foreground">Wil je meldingen ontvangen voor aankomende events?</span>
+          <button @click="requestNotificationPermission" class="notif-allow-btn ml-3 rounded px-2.5 py-1 text-xs font-medium transition">
+            Toestaan
+          </button>
+        </div>
+
         <div class="mb-4 flex items-center gap-2">
           <h2 class="text-xl font-semibold text-card-foreground">Create a new event</h2>
+          <button
+            @click="openNewEventModal()"
+            class="mini-cal-toggle-btn rounded-md border p-1 transition"
+            title="Nieuw event aanmaken"
+          >
+            <PlusIcon class="h-4 w-4" />
+          </button>
           <button
             @click="showCreateHelpModal = true"
             class="help-icon-button rounded-full p-1 transition"
@@ -848,8 +1197,68 @@ function handleOpenSettings() {
           {{ feedbackMessage }}
         </div>
 
+        <!-- Search & Date Navigation -->
+        <div class="mt-6 border-t border-border/70 pt-4">
+          <div class="flex items-center gap-2">
+            <input
+              v-model="searchQuery"
+              type="search"
+              placeholder="Zoek events..."
+              class="agenda-input min-w-0 flex-1 rounded-md border px-3 py-2 text-sm transition"
+            />
+            <div class="flex flex-shrink-0 items-center gap-1">
+              <template v-if="currentView === 'list' && !searchQuery.trim()">
+                <button @click="navigateList('prev')" class="mini-cal-toggle-btn rounded-md border p-1.5 transition" title="Vorige week">
+                  <ChevronLeftIcon class="h-3.5 w-3.5" />
+                </button>
+                <button @click="goToToday()" class="mini-cal-toggle-btn rounded-md border px-2.5 py-1.5 text-xs transition">Vandaag</button>
+                <button @click="navigateList('next')" class="mini-cal-toggle-btn rounded-md border p-1.5 transition" title="Volgende week">
+                  <ChevronRightIcon class="h-3.5 w-3.5" />
+                </button>
+                <span class="hidden whitespace-nowrap text-xs text-muted-foreground sm:inline">{{ listViewDateRange }}</span>
+              </template>
+              <button
+                @click="showMiniCalendar = !showMiniCalendar"
+                class="mini-cal-toggle-btn rounded-md border p-1.5 transition"
+                :class="showMiniCalendar ? 'mini-cal-toggle-active' : ''"
+                title="Datum selecteren"
+              >
+                <CalendarDaysIcon class="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+          <div v-if="showMiniCalendar && !searchQuery.trim()" class="mt-3">
+            <MiniCalendar :selectedDate="currentDate" :events="authStore.upcomingEvents" @select="handleMiniCalSelect" />
+          </div>
+          <div v-if="searchQuery.trim() && searchResults.length > 0" class="mt-3 space-y-1">
+            <p class="mb-2 text-xs text-muted-foreground">{{ searchResults.length }} resultaat{{ searchResults.length !== 1 ? 'en' : '' }}</p>
+            <ul class="space-y-1">
+              <li
+                v-for="event in searchResults"
+                :key="event.id"
+                class="event-row event-row-default flex cursor-pointer items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200"
+                :style="event.calendarColor ? { borderLeftColor: event.calendarColor, borderLeftWidth: '3px' } : {}"
+                @click="openEventModal(event)"
+              >
+                <div class="flex items-start space-x-2">
+                  <p class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
+                    {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : getEventDateKey(event) }}
+                  </p>
+                  <div>
+                    <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
+                    <p v-if="event.location" class="text-xs text-muted-foreground">{{ event.location }}</p>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div v-else-if="searchQuery.trim() && searchResults.length === 0" class="mt-3 text-sm text-muted-foreground">
+            Geen events gevonden.
+          </div>
+        </div>
+
         <!-- List View -->
-        <div v-if="currentView === 'list'" class="mt-8 border-t border-border/70 pt-6">
+        <div v-if="currentView === 'list' && !searchQuery.trim()" class="mt-6 border-t border-border/70 pt-6">
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
             <CalendarDaysIcon class="mr-2 h-6 w-6 text-muted-foreground" />
             Upcoming Events
@@ -880,7 +1289,7 @@ function handleOpenSettings() {
                   v-for="event in dayGroup.events"
                   :key="event.id"
                   :class="[
-                    'event-row flex cursor-pointer items-center justify-between space-x-2 rounded-md border p-2 text-sm transition-all duration-200',
+                    'event-row flex cursor-pointer items-center justify-between space-x-2 rounded-md border text-sm transition-all duration-200',
                     isAllDayEvent(event) ? 'event-row-all-day' : '',
                     event.id === lastAddedEventId
                       ? 'event-row-success shadow'
@@ -888,6 +1297,9 @@ function handleOpenSettings() {
                         ? 'event-row-today'
                         : 'event-row-default'
                   ]"
+                  :style="event.calendarColor
+                    ? { borderLeftColor: event.calendarColor, borderLeftWidth: '3px', paddingTop: '8px', paddingBottom: '8px', paddingRight: '8px', paddingLeft: '8px' }
+                    : { padding: '8px' }"
                   @click="openEventModal(event)"
                 >
                   <div class="flex items-start space-x-2">
@@ -897,7 +1309,10 @@ function handleOpenSettings() {
                     <p v-else class="w-16 flex-shrink-0 text-xs font-medium text-muted-foreground">
                       {{ event.start.dateTime ? formatEventTime(event.start.dateTime) : 'All day' }}
                     </p>
-                    <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
+                    <div>
+                      <p class="text-sm font-semibold text-card-foreground">{{ event.summary }}</p>
+                      <p v-if="event.location" class="text-xs text-muted-foreground">{{ event.location }}</p>
+                    </div>
                   </div>
                 </li>
               </ul>
@@ -908,23 +1323,25 @@ function handleOpenSettings() {
           </div>
         </div>
         <!-- Week View -->
-        <div v-if="currentView === 'week' && authStore.isLoggedIn" class="mt-8">
+        <div v-if="currentView === 'week' && authStore.isLoggedIn && !searchQuery.trim()" class="mt-8">
           <WeekView
             :currentDate="currentDate"
             @update:currentDate="currentDate = $event"
             @eventClicked="openEventModal"
+            @eventMoved="handleEventMoved"
             :events="authStore.upcomingEvents"
             :is24HourFormat="authStore.is24HourFormat"
           />
         </div>
 
         <!-- Month View -->
-        <div v-if="currentView === 'month' && authStore.isLoggedIn" class="mt-8">
+        <div v-if="currentView === 'month' && authStore.isLoggedIn && !searchQuery.trim()" class="mt-8">
           <MonthView
             :currentDate="currentDate"
             @update:currentDate="currentDate = $event"
             @dayClicked="handleMonthDayClick"
             @eventClicked="openEventModal"
+            @eventMoved="handleEventMoved"
             :events="authStore.upcomingEvents"
             :is24HourFormat="authStore.is24HourFormat"
           />
@@ -982,6 +1399,16 @@ function handleOpenSettings() {
                 type="text"
                 class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
                 placeholder="Event title"
+              />
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-location">Location</label>
+              <input
+                id="event-edit-location"
+                v-model="editLocation"
+                type="text"
+                class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                placeholder="Location"
               />
             </div>
             <div class="space-y-2">
@@ -1078,6 +1505,93 @@ function handleOpenSettings() {
           </div>
         </div>
       </div>
+      <!-- New Event Modal -->
+      <div v-if="showNewEventModal" class="event-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeNewEventModal">
+        <div class="event-modal-card w-full max-w-lg rounded-lg border p-5 sm:p-6">
+          <button
+            @click="closeNewEventModal"
+            class="modal-close-button absolute right-3 top-3 rounded-full p-1 transition"
+            aria-label="Close create modal"
+          >
+            <XMarkIcon class="h-5 w-5" />
+          </button>
+          <h3 class="text-lg font-semibold text-card-foreground">Nieuw event</h3>
+          <div class="mt-4 space-y-4">
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="new-event-summary">Titel</label>
+              <input
+                id="new-event-summary"
+                v-model="newEventSummary"
+                type="text"
+                class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                placeholder="Event titel"
+                autofocus
+                @keyup.enter="submitNewEvent"
+              />
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="new-event-location">Locatie</label>
+              <input
+                id="new-event-location"
+                v-model="newEventLocation"
+                type="text"
+                class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                placeholder="Locatie (optioneel)"
+              />
+            </div>
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="new-event-date">Datum</label>
+              <Litepicker
+                id="new-event-date"
+                v-model="newEventDate"
+                :options="singleDateLitepickerOptions"
+              />
+            </div>
+            <label class="flex items-center gap-2 text-sm text-card-foreground">
+              <input v-model="newEventIsAllDay" type="checkbox" class="h-4 w-4 rounded border-border/70" />
+              Hele dag
+            </label>
+            <div v-if="!newEventIsAllDay" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-card-foreground" for="new-event-start-time">Begintijd</label>
+                <input
+                  id="new-event-start-time"
+                  v-model="newEventStartTime"
+                  type="time"
+                  class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-card-foreground" for="new-event-end-time">Eindtijd</label>
+                <input
+                  id="new-event-end-time"
+                  v-model="newEventEndTime"
+                  type="time"
+                  class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              @click="closeNewEventModal"
+              :disabled="isLoading"
+              class="event-modal-cancel rounded-md border px-4 py-2 text-sm font-medium transition"
+            >
+              Annuleren
+            </button>
+            <button
+              @click="submitNewEvent"
+              :disabled="isLoading"
+              class="agenda-create-button rounded-md px-4 py-2 text-sm font-medium text-white transition"
+            >
+              <span v-if="isLoading">Bezig...</span>
+              <span v-else>Aanmaken</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings Modal -->
       <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
     </div>
@@ -1198,7 +1712,8 @@ function handleOpenSettings() {
   filter: brightness(0.92);
 }
 
-.event-modal-card :deep(#event-edit-date) {
+.event-modal-card :deep(#event-edit-date),
+.event-modal-card :deep(#new-event-date) {
   color: #ffffff;
 }
 
@@ -1236,5 +1751,43 @@ function handleOpenSettings() {
   height: 4px;
   background-color: hsl(var(--primary) / 0.7);
   min-width: 8%;
+}
+
+.offline-banner {
+  border-color: hsl(38 92% 50% / 0.5);
+  background-color: hsl(38 92% 50% / 0.12);
+  color: hsl(var(--card-foreground));
+}
+
+.notif-banner {
+  border-color: hsl(var(--border) / 0.6);
+  background-color: hsl(var(--secondary) / 0.3);
+}
+
+.notif-allow-btn {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  white-space: nowrap;
+}
+
+.notif-allow-btn:hover {
+  filter: brightness(0.92);
+}
+
+.mini-cal-toggle-btn {
+  border-color: hsl(var(--border) / 0.65);
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--background) / 0.2);
+}
+
+.mini-cal-toggle-btn:hover {
+  background-color: hsl(var(--secondary) / 0.5);
+  color: hsl(var(--card-foreground));
+}
+
+.mini-cal-toggle-active {
+  border-color: hsl(var(--primary) / 0.5);
+  background-color: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
 }
 </style>

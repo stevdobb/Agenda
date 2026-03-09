@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, computed } from 'vue'
+import { defineProps, computed, ref } from 'vue'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid'
 import { Button } from '@/components/ui/button'
 
@@ -9,7 +9,34 @@ const props = defineProps<{
   is24HourFormat: boolean
 }>()
 
-const emit = defineEmits(['update:currentDate', 'eventClicked'])
+const emit = defineEmits(['update:currentDate', 'eventClicked', 'eventMoved'])
+
+const draggedEvent = ref<any>(null)
+const dragOverDate = ref<string | null>(null)
+
+function onDragStart(event: DragEvent, calEvent: any) {
+  draggedEvent.value = calEvent
+  event.dataTransfer?.setData('text/plain', calEvent.id)
+}
+
+function onDragOver(event: DragEvent, dateKey: string) {
+  event.preventDefault()
+  dragOverDate.value = dateKey
+}
+
+function onDragLeave() {
+  dragOverDate.value = null
+}
+
+function onDrop(event: DragEvent, dateKey: string) {
+  event.preventDefault()
+  dragOverDate.value = null
+  if (!draggedEvent.value) return
+  const parts = dateKey.split('-').map(Number)
+  const newDate = new Date(parts[0], parts[1] - 1, parts[2])
+  emit('eventMoved', draggedEvent.value, newDate)
+  draggedEvent.value = null
+}
 
 function toLocalDateKey(date: Date) {
   const year = date.getFullYear()
@@ -132,9 +159,13 @@ function getEventRenderKey(event: any) {
           v-for="day in weekDays"
           :key="day.toISOString()"
           :class="[
-            'day-card rounded-md border p-2.5',
-            isToday(day) ? 'day-card-today border-primary/70' : 'border-border/70'
+            'day-card rounded-md border p-2.5 transition-colors',
+            isToday(day) ? 'day-card-today border-primary/70' : 'border-border/70',
+            dragOverDate === toLocalDateKey(day) ? 'day-card-drag-over' : ''
           ]"
+          @dragover="onDragOver($event, toLocalDateKey(day))"
+          @dragleave="onDragLeave"
+          @drop="onDrop($event, toLocalDateKey(day))"
         >
           <h4 class="mb-2 text-center font-bold text-card-foreground">{{ day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }) }}</h4>
           <div v-if="filteredEventsByWeek[toLocalDateKey(day)] && filteredEventsByWeek[toLocalDateKey(day)].length > 0">
@@ -142,7 +173,11 @@ function getEventRenderKey(event: any) {
               <li
                 v-for="event in filteredEventsByWeek[toLocalDateKey(day)]"
                 :key="getEventRenderKey(event)"
-                class="event-chip cursor-pointer rounded-md px-2 py-1.5 text-sm transition hover:border-primary/70"
+                class="event-chip cursor-grab rounded-md py-1.5 pr-2 text-sm transition hover:border-primary/70"
+                :style="event.calendarColor ? { borderLeftColor: event.calendarColor, borderLeftWidth: '3px' } : {}"
+                style="padding-left: 6px;"
+                draggable="true"
+                @dragstart="onDragStart($event, event)"
                 @click="emit('eventClicked', event)"
               >
                 <p class="event-chip-time text-xs font-semibold text-muted-foreground">
@@ -188,6 +223,11 @@ function getEventRenderKey(event: any) {
 
 .week-today-button {
   border: 1px solid hsl(var(--border) / 0.65);
+}
+
+.day-card-drag-over {
+  background-color: hsl(var(--primary) / 0.15);
+  border-color: hsl(var(--primary) / 0.6) !important;
 }
 
 @media (max-width: 1280px) {

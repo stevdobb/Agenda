@@ -13,6 +13,8 @@ interface CalendarEvent {
     date?: string | null;
     timeZone?: string | null;
   };
+  location?: string;
+  recurrence?: string[];
 }
 
 export interface GoogleCalendarListEntry {
