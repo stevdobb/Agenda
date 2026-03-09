@@ -1569,6 +1569,31 @@ onUnmounted(() => {
           <p class="mt-4 text-sm text-muted-foreground">
             Tip: if no time is given but a date is recognized, the event is created with a default time. Use <code>all day</code> to force an all-day event.
           </p>
+          <div class="mt-4 rounded-md border border-border/60 bg-card/40 p-3">
+            <p class="text-sm font-semibold text-card-foreground">Herhalende events</p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Voeg een herhalingspatroon toe aan je input:
+            </p>
+            <ul class="mt-2 space-y-1 text-sm text-card-foreground">
+              <li><code>standup elke dag om 9u</code> — dagelijks</li>
+              <li><code>vergadering elke maandag 10:00</code> — wekelijks op maandag</li>
+              <li><code>elke vrijdag lunch 12u</code> — elke specifieke dag</li>
+              <li><code>teammeeting elke 2 weken dinsdag 14u</code> — tweewekelijks</li>
+              <li><code>rapport elke maand</code> — maandelijks</li>
+              <li><code>verjaardag papa elk jaar 15 maart</code> — jaarlijks</li>
+            </ul>
+          </div>
+          <div class="mt-3 rounded-md border border-border/60 bg-card/40 p-3">
+            <p class="text-sm font-semibold text-card-foreground">Agenda kiezen via <code>/</code></p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Voeg <code>/agendanaam</code> toe aan het einde van je input om het event rechtstreeks aan een specifieke agenda toe te voegen. Een gedeeltelijke naam volstaat.
+            </p>
+            <ul class="mt-2 space-y-1 text-sm text-card-foreground">
+              <li><code>meeting at 14:30 tomorrow /work</code></li>
+              <li><code>verjaardag papa 15 maart /verjaar</code></li>
+              <li><code>loopwedstrijd elke zondag 9u /loop</code></li>
+            </ul>
+          </div>
           <div class="mt-6 flex justify-end">
             <button
               @click="closeCreateHelpModal"
