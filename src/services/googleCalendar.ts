@@ -200,3 +200,23 @@ export async function updateCalendarEvent(accessToken: string, eventId: string, 
 
   return await response.json()
 }
+
+export async function moveCalendarEvent(accessToken: string, eventId: string, fromCalendarId: string, toCalendarId: string) {
+  const encodedCalendarId = encodeURIComponent(fromCalendarId)
+  const encodedEventId = encodeURIComponent(eventId)
+  const params = new URLSearchParams({ destination: toCalendarId })
+  const response = await fetch(`${CALENDAR_API_URL}/calendars/${encodedCalendarId}/events/${encodedEventId}/move?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    console.error('Failed to move event:', error)
+    throw new Error(`Failed to move event: ${error.error.message}`)
+  }
+
+  return await response.json()
+}

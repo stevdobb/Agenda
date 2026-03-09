@@ -11,7 +11,7 @@ import TopMenu from '@/components/TopMenu.vue'
 import { PlusIcon, CalendarDaysIcon, TrashIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid' // Import Cog6ToothIcon, CheckBadgeIcon
 import MiniCalendar from '@/components/MiniCalendar.vue'
 import chrono from '@/services/customChrono'
-import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent } from '@/services/googleCalendar'
+import { createCalendarEvent, deleteCalendarEvent, updateCalendarEvent, moveCalendarEvent } from '@/services/googleCalendar'
 import { requestAccessToken } from '@/services/gsiService'
 
 const router = useRouter()
@@ -38,6 +38,7 @@ const newEventStartTime = ref('09:00')
 const newEventEndTime = ref('10:00')
 const newEventIsAllDay = ref(false)
 const newEventLocation = ref('')
+const newEventCalendarId = ref('')
 const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
 const notificationPermission = ref<NotificationPermission>(
   typeof Notification !== 'undefined' ? Notification.permission : 'denied'
@@ -49,6 +50,7 @@ const editStartTime = ref('09:00')
 const editEndTime = ref('10:00')
 const editIsAllDay = ref(false)
 const editLocation = ref('')
+const editCalendarId = ref('')
 const singleDateLitepickerOptions = {
   singleMode: true,
   autoApply: true,
@@ -60,6 +62,7 @@ interface GoogleCalendarEvent {
   id: string
   summary?: string
   accountId?: string
+  calendarId?: string
   start: {
     dateTime?: string
     date?: string
@@ -335,11 +338,12 @@ function formatAddedTime(date: Date) {
   })
 }
 
-function getCreatedEventFeedback(summary: string, startDate: Date) {
+function getCreatedEventFeedback(summary: string, startDate: Date, calendarName?: string) {
   const formattedTime = formatAddedTime(startDate)
+  const calendarSuffix = calendarName ? ` → ${calendarName}` : ''
   if (isSameLocalDay(startDate, new Date())) {
     return {
-      message: `Added today at ${formattedTime}: "${summary}"`,
+      message: `Added today at ${formattedTime}: "${summary}"${calendarSuffix}`,
       useTodayStyle: true,
     }
   }
@@ -351,15 +355,16 @@ function getCreatedEventFeedback(summary: string, startDate: Date) {
   })
 
   return {
-    message: `Added for ${formattedDate} at ${formattedTime}: "${summary}"`,
+    message: `Added for ${formattedDate} at ${formattedTime}: "${summary}"${calendarSuffix}`,
     useTodayStyle: false,
   }
 }
 
-function getCreatedAllDayEventFeedback(summary: string, startDate: Date) {
+function getCreatedAllDayEventFeedback(summary: string, startDate: Date, calendarName?: string) {
+  const calendarSuffix = calendarName ? ` → ${calendarName}` : ''
   if (isSameLocalDay(startDate, new Date())) {
     return {
-      message: `Added all-day for today: "${summary}"`,
+      message: `Added all-day for today: "${summary}"${calendarSuffix}`,
       useTodayStyle: true,
     }
   }
@@ -371,7 +376,7 @@ function getCreatedAllDayEventFeedback(summary: string, startDate: Date) {
   })
 
   return {
-    message: `Added all-day for ${formattedDate}: "${summary}"`,
+    message: `Added all-day for ${formattedDate}: "${summary}"${calendarSuffix}`,
     useTodayStyle: false,
   }
 }
@@ -432,6 +437,7 @@ function openEventModal(event: GoogleCalendarEvent) {
   selectedEvent.value = event
   editSummary.value = event.summary ?? ''
   editLocation.value = (event as any).location ?? ''
+  editCalendarId.value = event.calendarId ?? 'primary'
 
   if (event.start.dateTime) {
     const start = new Date(event.start.dateTime)
@@ -468,6 +474,17 @@ async function refreshVisibleEvents() {
   const { fetchStart, fetchEnd } = getFetchRangeForView(currentView.value, currentDate.value)
   await authStore.fetchUpcomingEvents(fetchStart, fetchEnd, true)
 }
+
+const availableCalendarsForEdit = computed(() => {
+  const accountId = selectedEvent.value?.accountId ?? authStore.activeAccountId
+  const account = authStore.accounts.find((a: any) => a.id === accountId)
+  return account?.calendars ?? []
+})
+
+const availableCalendarsForCreate = computed(() => {
+  const account = authStore.accounts.find((a: any) => a.id === authStore.activeAccountId)
+  return account?.calendars ?? []
+})
 
 const groupedEvents = computed(() => {
   const groups: { [key: string]: any[] } = {};
@@ -573,8 +590,24 @@ async function createEvent() {
 
   // Otherwise, proceed as a calendar event
   try {
-    const forceAllDay = /\b(all[\s-]?day|hele\s+dag)\b/i.test(input)
-    let normalizedInput = input
+    // Extract /calendarname shortcut (e.g. /work, /wor)
+    const calendarSlashMatch = input.match(/\s*\/([^\s/]+)\s*$/)
+    let targetCalendarId = 'primary'
+    let inputWithoutSlash = input
+    if (calendarSlashMatch) {
+      const slug = calendarSlashMatch[1].toLowerCase()
+      const activeAccount = authStore.accounts.find((a: any) => a.id === authStore.activeAccountId)
+      const matched = activeAccount?.calendars?.find((c: any) =>
+        c.summary.toLowerCase().startsWith(slug) || c.summary.toLowerCase().includes(slug)
+      )
+      if (matched) {
+        targetCalendarId = matched.id
+        inputWithoutSlash = input.slice(0, calendarSlashMatch.index).trim()
+      }
+    }
+
+    const forceAllDay = /\b(all[\s-]?day|hele\s+dag)\b/i.test(inputWithoutSlash)
+    let normalizedInput = inputWithoutSlash
       .replace(/\b(all[\s-]?day|hele\s+dag)\b/gi, '')
       .replace(/\s{2,}/g, ' ')
       .trim()
@@ -697,11 +730,13 @@ async function createEvent() {
           ...(rrule ? { recurrence: [rrule] } : {}),
         };
 
-    const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent); // Assuming this returns the created event
+    const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent, targetCalendarId);
     lastAddedEventId.value = createdEvent.id; // Store the ID for highlighting
+    const activeAccount2 = authStore.accounts.find((a: any) => a.id === authStore.activeAccountId)
+    const calendarName = activeAccount2?.calendars?.find((c: any) => c.id === targetCalendarId)?.summary
     const createdFeedback = allDayStartDate
-      ? getCreatedAllDayEventFeedback(summary, parseDateKey(allDayStartDate) ?? new Date())
-      : getCreatedEventFeedback(summary, startDate!)
+      ? getCreatedAllDayEventFeedback(summary, parseDateKey(allDayStartDate) ?? new Date(), calendarName)
+      : getCreatedEventFeedback(summary, startDate!, calendarName)
     setFeedbackSuccess(createdFeedback.message, createdFeedback.useTodayStyle)
     eventText.value = ''; // Clear input
     
@@ -790,7 +825,14 @@ async function saveSelectedEvent() {
     }
 
     payload.location = editLocation.value.trim() || undefined
-    await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload)
+    const originalCalendarId = eventToUpdate.calendarId ?? 'primary'
+    const targetCalendarId = editCalendarId.value || 'primary'
+    let currentCalendarId = originalCalendarId
+    if (targetCalendarId !== originalCalendarId) {
+      await moveCalendarEvent(account.accessToken, eventToUpdate.id, originalCalendarId, targetCalendarId)
+      currentCalendarId = targetCalendarId
+    }
+    await updateCalendarEvent(account.accessToken, eventToUpdate.id, payload, currentCalendarId)
     setFeedbackSuccess('Event successfully updated.')
     dismissEventModal()
     await refreshVisibleEvents()
@@ -819,7 +861,7 @@ async function deleteEvent(event: GoogleCalendarEvent) {
   }
 
   try {
-    await deleteCalendarEvent(account.accessToken, event.id)
+    await deleteCalendarEvent(account.accessToken, event.id, event.calendarId ?? 'primary')
     setFeedbackSuccess('Event successfully deleted.')
     if (selectedEvent.value?.id === event.id) {
       dismissEventModal()
@@ -867,6 +909,8 @@ function openNewEventModal(date?: Date) {
   newEventEndTime.value = '10:00'
   newEventIsAllDay.value = false
   newEventLocation.value = ''
+  const activeAccount = authStore.accounts.find((a: any) => a.id === authStore.activeAccountId)
+  newEventCalendarId.value = activeAccount?.calendars?.find((c: any) => c.primary)?.id ?? activeAccount?.calendars?.[0]?.id ?? 'primary'
   showNewEventModal.value = true
 }
 
@@ -929,11 +973,12 @@ async function submitNewEvent() {
       feedbackDate = startDateTime
     }
 
-    const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent)
+    const createdEvent = await createCalendarEvent(activeAccount.accessToken, calendarEvent, newEventCalendarId.value || 'primary')
     lastAddedEventId.value = createdEvent.id
+    const calendarNameForFb = availableCalendarsForCreate.value.find((c: any) => c.id === (newEventCalendarId.value || 'primary'))?.summary
     const fb = newEventIsAllDay.value
-      ? getCreatedAllDayEventFeedback(trimmedSummary, feedbackDate)
-      : getCreatedEventFeedback(trimmedSummary, feedbackDate)
+      ? getCreatedAllDayEventFeedback(trimmedSummary, feedbackDate, calendarNameForFb)
+      : getCreatedEventFeedback(trimmedSummary, feedbackDate, calendarNameForFb)
     setFeedbackSuccess(fb.message, fb.useTodayStyle)
     showNewEventModal.value = false
     await refreshVisibleEvents()
@@ -996,7 +1041,7 @@ async function handleEventMoved(event: GoogleCalendarEvent, newDate: Date) {
       }
     }
 
-    await updateCalendarEvent(account.accessToken, event.id, payload)
+    await updateCalendarEvent(account.accessToken, event.id, payload, event.calendarId ?? 'primary')
     await refreshVisibleEvents()
   } catch (error: any) {
     setFeedbackError(`Error moving event: ${error.message}`)
@@ -1428,6 +1473,18 @@ onUnmounted(() => {
                 placeholder="Location"
               />
             </div>
+            <div v-if="availableCalendarsForEdit.length > 1" class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="event-edit-calendar">Calendar</label>
+              <select
+                id="event-edit-calendar"
+                v-model="editCalendarId"
+                class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+              >
+                <option v-for="cal in availableCalendarsForEdit" :key="cal.id" :value="cal.id">
+                  {{ cal.summary }}
+                </option>
+              </select>
+            </div>
             <div class="space-y-2">
               <label class="text-sm font-medium text-card-foreground" for="event-edit-date">Date</label>
               <Litepicker
@@ -1556,6 +1613,18 @@ onUnmounted(() => {
                 placeholder="Locatie (optioneel)"
               />
             </div>
+            <div v-if="availableCalendarsForCreate.length > 1" class="space-y-2">
+              <label class="text-sm font-medium text-card-foreground" for="new-event-calendar">Agenda</label>
+              <select
+                id="new-event-calendar"
+                v-model="newEventCalendarId"
+                class="agenda-input w-full rounded-md border px-3 py-2 text-sm"
+              >
+                <option v-for="cal in availableCalendarsForCreate" :key="cal.id" :value="cal.id">
+                  {{ cal.summary }}
+                </option>
+              </select>
+            </div>
             <div class="space-y-2">
               <label class="text-sm font-medium text-card-foreground" for="new-event-date">Datum</label>
               <Litepicker
@@ -1626,6 +1695,11 @@ onUnmounted(() => {
   border-color: hsl(var(--input) / 0.85);
   background-color: hsl(var(--background) / 0.25);
   color: hsl(var(--card-foreground));
+}
+
+select.agenda-input option {
+  background-color: hsl(220 25% 18%);
+  color: hsl(210 20% 88%);
 }
 
 .agenda-input::placeholder {
