@@ -24,10 +24,12 @@ let deferredPrompt: BeforeInstallPromptEvent | null = null
 const viewItems = [
   { key: 'list', label: 'List', icon: List },
   { key: 'week', label: 'Week', icon: CalendarRange },
-  { key: 'month', label: 'Month', icon: CalendarDays },
+  { key: 'month', label: 'Month', icon: CalendarDays, mobileHidden: true },
   { key: 'todos', label: 'Todos', icon: CheckSquare },
   { key: 'year', label: 'Year', icon: LayoutGrid },
 ]
+
+const mobileViewItems = viewItems.filter(item => !item.mobileHidden)
 
 function selectView(viewKey: string) {
   emit('update:view', viewKey)
@@ -161,7 +163,7 @@ onBeforeUnmount(() => {
           <div v-if="mobileMenuOpen" class="mobile-menu-panel md:hidden">
             <div class="grid grid-cols-2 gap-2">
               <Button
-                v-for="item in viewItems"
+                v-for="item in mobileViewItems"
                 :key="`mobile-${item.key}`"
                 size="sm"
                 :variant="props.currentView === item.key ? 'default' : 'secondary'"

@@ -32,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isDarkMode = ref(false)
   const is24HourFormat = ref(true) // Default to 24-hour format
   const isFetchingEvents = ref(false); // To prevent race conditions
+  const fetchProgress = ref<{ current: number; total: number } | null>(null);
 
   const upcomingEvents = computed(() => {
     const allAggregatedEvents: any[] = [];
@@ -89,6 +90,7 @@ function checkDarkMode() {
 
     try {
       isFetchingEvents.value = true;
+      fetchProgress.value = { current: 0, total: 0 };
 
       let effectiveStartDate = startDate;
       let effectiveEndDate = endDate;
@@ -140,30 +142,36 @@ function checkDarkMode() {
         }
 
         try {
-          const calendars = await getCalendarList(account.accessToken);
-          account.calendars = calendars;
+          if (force || account.calendars.length === 0) {
+            account.calendars = await getCalendarList(account.accessToken);
+          }
+          const calendars = account.calendars;
+          fetchProgress.value!.total += calendars.length;
 
-          const accountEvents: any[] = [];
-          for (const calendar of calendars) {
-            try {
-              const calendarEvents = await getUpcomingEventsForCalendar(account.accessToken, timeMin, timeMax, calendar.id);
-              accountEvents.push(
-                ...calendarEvents.map((event: any) => ({
+          const calendarResults = await Promise.all(
+            calendars.map(async (calendar) => {
+              try {
+                const calendarEvents = await getUpcomingEventsForCalendar(account.accessToken, timeMin, timeMax, calendar.id);
+                fetchProgress.value!.current++;
+                return calendarEvents.map((event: any) => ({
                   ...event,
                   accountId: account.id,
                   accountColor: account.color,
                   calendarId: calendar.id,
                   calendarSummary: calendar.summary,
                   calendarPrimary: Boolean(calendar.primary),
-                })),
-              );
-            } catch (calendarError) {
-              console.error(
-                `AuthStore: Failed to fetch events for calendar ${calendar.summary} (${calendar.id}) of ${account.user.email}:`,
-                calendarError,
-              );
-            }
-          }
+                }));
+              } catch (calendarError) {
+                fetchProgress.value!.current++;
+                console.error(
+                  `AuthStore: Failed to fetch events for calendar ${calendar.summary} (${calendar.id}) of ${account.user.email}:`,
+                  calendarError,
+                );
+                return [];
+              }
+            }),
+          );
+          const accountEvents: any[] = calendarResults.flat();
 
           console.log(`AuthStore: Fetched ${accountEvents.length} events for account ${account.user.email}.`);
           account.events = accountEvents;
@@ -181,6 +189,7 @@ function checkDarkMode() {
       console.log('AuthStore: fetchUpcomingEvents completed. Total events in accounts:', accounts.value.reduce((sum, acc) => sum + acc.events.length, 0));
     } finally {
       isFetchingEvents.value = false;
+      fetchProgress.value = null;
     }
   }
 
@@ -314,6 +323,7 @@ function checkDarkMode() {
     activeAccountId,    // Expose the active account ID
     isLoggedIn,
     isFetchingEvents,
+    fetchProgress,
     upcomingEvents,
     fetchUpcomingEvents,
     setToken,
