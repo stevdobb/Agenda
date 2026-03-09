@@ -154,14 +154,16 @@ watch(
               <li
                 v-for="todo in visibleTodos"
                 :key="todo.id"
-                class="todo-row flex items-center justify-between space-x-3 rounded-md border p-3"
+                class="todo-row flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200"
               >
-                <div class="flex items-center space-x-3">
-                  <input type="checkbox" :checked="todo.completed" @change="todoStore.toggleTodo(todo.id)" class="form-checkbox h-5 w-5 text-blue-600">
-                  <span class="font-medium text-card-foreground">{{ todo.content }}</span>
-                </div>
-                <button @click="todoStore.removeTodo(todo.id)" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                  <TrashIcon class="h-5 w-5" />
+                <button
+                  class="todo-checkbox-btn flex flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 todo-checkbox-unchecked"
+                  @click="todoStore.toggleTodo(todo.id)"
+                >
+                </button>
+                <span class="flex-1 text-sm font-medium text-card-foreground">{{ todo.content }}</span>
+                <button @click="todoStore.removeTodo(todo.id)" class="todo-delete-btn flex-shrink-0 rounded-full p-1 transition">
+                  <TrashIcon class="h-4 w-4" />
                 </button>
               </li>
             </ul>
@@ -188,14 +190,19 @@ watch(
                 <li
                   v-for="todo in completedTodos"
                   :key="todo.id"
-                  class="todo-row todo-row-completed flex items-center justify-between space-x-3 rounded-md border p-3 line-through"
+                  class="todo-row todo-row-completed flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200"
                 >
-                  <div class="flex items-center space-x-3">
-                    <input type="checkbox" :checked="todo.completed" @change="todoStore.toggleTodo(todo.id)" class="form-checkbox h-5 w-5 text-blue-600">
-                    <span class="font-medium text-card-foreground">{{ todo.content }}</span>
-                  </div>
-                  <button @click="todoStore.removeTodo(todo.id)" class="rounded-full p-1 text-muted-foreground transition hover:text-destructive focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                    <TrashIcon class="h-5 w-5" />
+                  <button
+                    class="todo-checkbox-btn flex flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 todo-checkbox-checked"
+                    @click="todoStore.toggleTodo(todo.id)"
+                  >
+                    <svg class="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                  <span class="flex-1 text-sm font-medium todo-text-done">{{ todo.content }}</span>
+                  <button @click="todoStore.removeTodo(todo.id)" class="todo-delete-btn flex-shrink-0 rounded-full p-1 transition">
+                    <TrashIcon class="h-4 w-4" />
                   </button>
                 </li>
               </ul>
@@ -260,5 +267,43 @@ watch(
   border-color: hsl(156 63% 42% / 0.5);
   background-color: hsl(156 63% 42% / 0.2);
   color: hsl(var(--muted-foreground));
+}
+
+.todo-checkbox-btn {
+  width: 1.375rem;
+  height: 1.375rem;
+  border: 2px solid hsl(var(--border));
+  background-color: transparent;
+  flex-shrink: 0;
+}
+
+.todo-checkbox-unchecked {
+  border-color: hsl(var(--border));
+}
+
+.todo-checkbox-unchecked:hover {
+  border-color: hsl(var(--primary) / 0.7);
+  background-color: hsl(var(--primary) / 0.08);
+}
+
+.todo-checkbox-checked {
+  border-color: hsl(156 63% 42%);
+  background-color: hsl(156 63% 42%);
+  color: #ffffff;
+}
+
+.todo-text-done {
+  color: hsl(var(--muted-foreground));
+  text-decoration: line-through;
+  text-decoration-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.todo-delete-btn {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.todo-delete-btn:hover {
+  color: hsl(var(--destructive));
+  background-color: hsl(var(--destructive) / 0.1);
 }
 </style>
