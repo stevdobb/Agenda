@@ -11,6 +11,7 @@ const props = defineProps<{
   is24HourFormat: boolean,
   selectedDate?: Date,
   showEventCount?: boolean,
+  weekStartsOnMonday?: boolean,
 }>()
 
 const { t, locale } = useI18n()
@@ -86,7 +87,8 @@ const daysInMonth = computed(() => {
 })
 
 const firstDayOfMonth = computed(() => {
-  return startOfMonth.value.getDay(); // 0 for Sunday, 1 for Monday
+  const day = startOfMonth.value.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  return props.weekStartsOnMonday ? (day + 6) % 7 : day;
 })
 
 const calendarDays = computed(() => {
@@ -137,11 +139,10 @@ const currentMonthYear = computed(() => {
 
 const weekdayLabels = computed(() => {
   const fmt = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
-  // Week starting Sunday: 0=Sun, 1=Mon, ..., 6=Sat
-  return [0, 1, 2, 3, 4, 5, 6].map(d => {
-    const date = new Date(2024, 0, d + 7) // Jan 7=Sun, 8=Mon, ..., 13=Sat
-    return fmt.format(date)
-  })
+  // Jan 1 2024 = Monday, Jan 7 2024 = Sunday
+  return props.weekStartsOnMonday
+    ? [0, 1, 2, 3, 4, 5, 6].map(d => fmt.format(new Date(2024, 0, d + 1))) // Mon–Sun
+    : [0, 1, 2, 3, 4, 5, 6].map(d => fmt.format(new Date(2024, 0, d + 7))) // Sun–Sat
 })
 
 function navigateMonth(direction: 'prev' | 'next') {

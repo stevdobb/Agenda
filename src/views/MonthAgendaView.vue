@@ -107,6 +107,7 @@ function handleViewSwitch(view: string) {
             :is24HourFormat="authStore.is24HourFormat"
             :selected-date="selectedDay"
             :show-event-count="true"
+            :week-starts-on-monday="true"
             @update:currentDate="currentDate = $event"
             @dayClicked="handleDayClick"
             @eventClicked="() => {}"
