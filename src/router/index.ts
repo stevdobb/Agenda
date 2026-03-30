@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import YearViewPage from '../views/YearViewPage.vue'
 import TodosView from '../views/TodosView.vue'
+import MonthAgendaView from '../views/MonthAgendaView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,6 +12,11 @@ const router = createRouter({
       alias: '/',
       name: 'agenda',
       component: HomeView
+    },
+    {
+      path: '/month-agenda',
+      name: 'month-agenda',
+      component: MonthAgendaView
     },
     {
       path: '/settings',

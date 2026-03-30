@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
 import SettingsModal from '@/components/SettingsModal.vue' // Import SettingsModal
@@ -18,6 +18,7 @@ import { requestAccessToken } from '@/services/gsiService'
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const todoStore = useTodoStore() // Instantiate Todo store
 const eventText = ref('')
@@ -27,7 +28,9 @@ const feedbackTone = ref<'success' | 'error' | null>(null)
 const feedbackUseTodayStyle = ref(false)
 const showSettingsModal = ref(false) // State for settings modal
 const lastAddedEventId = ref<string | null>(null) // To highlight the last added event
-const currentView = ref<'list' | 'week' | 'month'>('list') // State for current view
+const validViews = ['list', 'week', 'month'] as const
+const initialView = validViews.includes(route.query.view as any) ? route.query.view as 'list' | 'week' | 'month' : 'list'
+const currentView = ref<'list' | 'week' | 'month'>(initialView)
 const currentDate = ref(new Date()) // State for current date (for week/month view navigation)
 const tokenRefreshBufferMs = 30 * 1000
 const showEventModal = ref(false)
@@ -1098,6 +1101,8 @@ function handleViewSwitch(view: string) {
     router.push('/year')
   } else if (view === 'todos') {
     router.push('/todos')
+  } else if (view === 'month_agenda') {
+    router.push('/month-agenda')
   } else {
     currentView.value = view as 'list' | 'week' | 'month'
   }
@@ -1216,14 +1221,24 @@ onUnmounted(() => {
           </button>
         </div>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div class="relative flex-grow">
             <input
-          autofocus
-            v-model="eventText"
-            @keyup.enter="createEvent"
-            type="text"
-            :placeholder="$t('event_input_placeholder')"
-            class="agenda-input flex-grow rounded-md border p-3 transition"
-          />
+              autofocus
+              v-model="eventText"
+              @keyup.enter="createEvent"
+              type="text"
+              placeholder=""
+              class="agenda-input w-full rounded-md border p-3 pr-8 transition"
+            />
+            <button
+              v-if="eventText"
+              @click="eventText = ''"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground transition hover:text-card-foreground"
+              :aria-label="$t('close')"
+            >
+              <XMarkIcon class="h-4 w-4" />
+            </button>
+          </div>
           <button
             @click="createEvent"
             :disabled="isLoading"
@@ -1237,6 +1252,37 @@ onUnmounted(() => {
             <PlusIcon v-else class="h-6 w-6" />
           </button>
         </div>
+        <div class="mt-2 flex flex-wrap gap-1">
+          <button
+            @click="eventText = eventText.trimEnd() + ' at '"
+            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition"
+          >at</button>
+          <button
+            v-for="hour in [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]"
+            :key="hour"
+            @click="eventText = eventText.trimEnd() + ' ' + hour"
+            class="mini-cal-toggle-btn rounded-md border px-2 py-1 text-xs transition"
+          >{{ hour }}</button>
+        </div>
+        <div class="mt-1 flex gap-1">
+          <button
+            v-for="min in [15,30,45]"
+            :key="min"
+            @click="eventText = eventText.trimEnd() + ':' + String(min).padStart(2,'0')"
+            class="mini-cal-toggle-btn rounded-md border px-2 py-1 text-xs transition"
+          >:{{ min }}</button>
+        </div>
+        <div class="mt-1 flex gap-1">
+          <button
+            @click="eventText = eventText.trimEnd() + ' today'"
+            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition"
+          >{{ $t('today') }}</button>
+          <button
+            @click="eventText = eventText.trimEnd() + ' tomorrow'"
+            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition"
+          >{{ $t('tomorrow') }}</button>
+        </div>
+
         <div
           v-if="feedbackMessage"
           class="feedback-alert mt-4 rounded-md border px-3 py-2 text-sm"

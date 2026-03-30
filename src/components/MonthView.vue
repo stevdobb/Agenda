@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button'
 const props = defineProps<{
   currentDate: Date,
   events: any[],
-  is24HourFormat: boolean
+  is24HourFormat: boolean,
+  selectedDate?: Date,
+  showEventCount?: boolean,
 }>()
 
 const { t, locale } = useI18n()
@@ -162,6 +164,11 @@ function isToday(date: Date | null) {
   return date.toDateString() === today.toDateString();
 }
 
+function isSelected(date: Date | null) {
+  if (!date || !props.selectedDate) return false;
+  return date.toDateString() === props.selectedDate.toDateString();
+}
+
 function getEventRenderKey(event: any) {
   const accountId = event.accountId ?? 'no-account'
   const calendarId = event.calendarId ?? 'primary'
@@ -197,6 +204,7 @@ function getEventRenderKey(event: any) {
           'day-cell relative rounded-md border p-1 transition-colors',
           day ? 'cursor-pointer border-border/70' : 'day-cell-empty border-border/50',
           isToday(day) ? 'day-cell-today border-primary/70' : '',
+          isSelected(day) && !isToday(day) ? 'day-cell-selected' : '',
           day && dragOverDate === toLocalDateKey(day) ? 'day-cell-drag-over' : ''
         ]"
         @click="day && emit('dayClicked', day)"
@@ -204,10 +212,19 @@ function getEventRenderKey(event: any) {
         @dragleave="onDragLeave"
         @drop="day && onDrop($event, day)"
       >
-        <div v-if="day" class="text-right text-xs font-semibold" :class="isToday(day) ? 'text-primary' : 'text-card-foreground'">
-          {{ day.getDate() }}
+        <div v-if="day" class="flex items-start justify-between gap-1">
+          <span
+            v-if="showEventCount && filteredEventsByMonth[toLocalDateKey(day)]"
+            class="event-count-badge"
+          >
+            {{ filteredEventsByMonth[toLocalDateKey(day)].length }}
+          </span>
+          <span v-else class="flex-1" />
+          <span class="text-xs font-semibold" :class="isToday(day) ? 'text-primary' : 'text-card-foreground'">
+            {{ day.getDate() }}
+          </span>
         </div>
-        <div v-if="day && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
+        <div v-if="day && !showEventCount && filteredEventsByMonth[toLocalDateKey(day)]" class="space-y-0.5 text-xs">
           <p v-for="event in filteredEventsByMonth[toLocalDateKey(day)]" :key="getEventRenderKey(event)"
              class="month-event-chip flex cursor-grab items-center gap-0.5 rounded-sm py-0.5 pr-1 text-card-foreground transition hover:border-primary/70"
              draggable="true"
@@ -250,5 +267,24 @@ function getEventRenderKey(event: any) {
 .day-cell-drag-over {
   background-color: hsl(var(--primary) / 0.15);
   border-color: hsl(var(--primary) / 0.6) !important;
+}
+
+.day-cell-selected {
+  background-color: hsl(var(--accent) / 0.45);
+  border-color: hsl(var(--border) / 0.9) !important;
+}
+
+.event-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background-color: hsl(var(--primary) / 0.25);
+  color: hsl(var(--primary-foreground));
 }
 </style>
