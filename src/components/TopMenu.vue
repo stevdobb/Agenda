@@ -28,7 +28,7 @@ const viewItems = [
   { key: 'list', icon: List },
   { key: 'week', icon: CalendarRange },
   { key: 'month', icon: CalendarDays, mobileHidden: true },
-  { key: 'month_agenda', icon: CalendarCheck, mobileHidden: true },
+  { key: 'month_agenda', icon: CalendarCheck },
   { key: 'todos', icon: CheckSquare },
   { key: 'year', icon: LayoutGrid },
 ]
