@@ -271,8 +271,9 @@ function getEventRenderKey(event: any) {
 }
 
 .day-cell-selected {
-  background-color: hsl(var(--accent) / 0.45);
-  border-color: hsl(var(--border) / 0.9) !important;
+  background-color: hsl(var(--primary) / 0.35);
+  border-color: hsl(var(--primary) / 0.8) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.25);
 }
 
 .event-count-badge {

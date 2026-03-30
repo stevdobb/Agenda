@@ -165,6 +165,16 @@ function handleViewSwitch(view: string) {
   min-height: 2.75rem;
 }
 
+.compact-month :deep(.event-count-badge) {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .compact-month :deep(.event-count-badge) {
+    display: inline-flex;
+  }
+}
+
 .event-item {
   border-color: hsl(var(--border) / 0.6);
   background-color: hsl(var(--background) / 0.2);
