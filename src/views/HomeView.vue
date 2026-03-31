@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +22,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 const todoStore = useTodoStore() // Instantiate Todo store
 const eventText = ref('')
+const eventInputRef = ref<HTMLInputElement | null>(null)
+function appendToInput(text: string) {
+  eventText.value = eventText.value.trimEnd() + text
+  nextTick(() => eventInputRef.value?.focus())
+}
 const isLoading = ref(false)
 const feedbackMessage = ref('')
 const feedbackTone = ref<'success' | 'error' | null>(null)
@@ -36,6 +41,7 @@ const tokenRefreshBufferMs = 30 * 1000
 const showEventModal = ref(false)
 const showCreateHelpModal = ref(false)
 const searchQuery = ref('')
+const hideCompletedTodos = ref(false)
 const showMiniCalendar = ref(false)
 const showNewEventModal = ref(false)
 const newEventSummary = ref('')
@@ -1206,10 +1212,10 @@ onUnmounted(() => {
           <h2 class="text-xl font-semibold text-card-foreground">{{ $t('create_new_event') }}</h2>
           <button
             @click="openNewEventModal()"
-            class="mini-cal-toggle-btn rounded-md border p-1 transition"
+            class="mini-cal-toggle-btn rounded-md border p-1 md:p-2 transition"
             :title="$t('create_new_event')"
           >
-            <PlusIcon class="h-4 w-4" />
+            <PlusIcon class="h-4 w-4 md:h-6 md:w-6" />
           </button>
           <button
             @click="showCreateHelpModal = true"
@@ -1223,6 +1229,7 @@ onUnmounted(() => {
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div class="relative flex-grow">
             <input
+              ref="eventInputRef"
               autofocus
               v-model="eventText"
               @keyup.enter="createEvent"
@@ -1254,32 +1261,50 @@ onUnmounted(() => {
         </div>
         <div class="mt-2 flex flex-wrap gap-1">
           <button
-            @click="eventText = eventText.trimEnd() + ' at '"
-            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition"
+            @click="appendToInput(' at ')"
+            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition md:px-3 md:py-1.5 md:text-sm"
           >at</button>
+          <!-- mobile: 6–21 -->
           <button
             v-for="hour in [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]"
-            :key="hour"
-            @click="eventText = eventText.trimEnd() + ' ' + hour"
-            class="mini-cal-toggle-btn rounded-md border px-2 py-1 text-xs transition"
+            :key="'m-' + hour"
+            @click="appendToInput(' ' + hour)"
+            class="mini-cal-toggle-btn md:hidden rounded-md border px-2 py-1 text-xs transition"
+          >{{ hour }}</button>
+          <!-- desktop: 0–23 -->
+          <button
+            v-for="hour in Array.from({length: 24}, (_, i) => i)"
+            :key="'d-' + hour"
+            @click="appendToInput(' ' + hour)"
+            class="mini-cal-toggle-btn hidden md:inline-flex rounded-md border px-3 py-1.5 text-sm transition"
           >{{ hour }}</button>
         </div>
-        <div class="mt-1 flex gap-1">
+        <!-- mobile minutes -->
+        <div class="mt-1 flex flex-wrap gap-1 md:hidden">
           <button
             v-for="min in [15,30,45]"
             :key="min"
-            @click="eventText = eventText.trimEnd() + ':' + String(min).padStart(2,'0')"
+            @click="appendToInput(':' + String(min).padStart(2,'0'))"
             class="mini-cal-toggle-btn rounded-md border px-2 py-1 text-xs transition"
+          >:{{ min }}</button>
+        </div>
+        <!-- desktop minutes: per 10 + 15, 45 -->
+        <div class="mt-1 hidden flex-wrap gap-1 md:flex">
+          <button
+            v-for="min in [10,15,20,30,40,45,50]"
+            :key="min"
+            @click="appendToInput(':' + String(min).padStart(2,'0'))"
+            class="mini-cal-toggle-btn rounded-md border px-3 py-1.5 text-sm transition"
           >:{{ min }}</button>
         </div>
         <div class="mt-1 flex gap-1">
           <button
-            @click="eventText = eventText.trimEnd() + ' today'"
-            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition"
+            @click="appendToInput(' today')"
+            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition md:px-3 md:py-1.5 md:text-sm"
           >{{ $t('today') }}</button>
           <button
-            @click="eventText = eventText.trimEnd() + ' tomorrow'"
-            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition"
+            @click="appendToInput(' tomorrow')"
+            class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition md:px-3 md:py-1.5 md:text-sm"
           >{{ $t('tomorrow') }}</button>
         </div>
 
@@ -1452,10 +1477,17 @@ onUnmounted(() => {
           <h2 class="mb-4 flex items-center text-xl font-semibold text-card-foreground">
             <CheckBadgeIcon class="mr-2 h-6 w-6 text-muted-foreground" />
             {{ $t('my_todos') }}
+            <button
+              @click="hideCompletedTodos = !hideCompletedTodos"
+              class="mini-cal-toggle-btn ml-auto rounded-md border px-2 py-1 text-xs font-medium transition"
+              :title="hideCompletedTodos ? $t('show_completed_todos') : $t('hide_completed_todos')"
+            >
+              {{ hideCompletedTodos ? $t('show_completed_todos') : $t('hide_completed_todos') }}
+            </button>
           </h2>
           <ul class="space-y-1.5">
             <li
-              v-for="todo in todoStore.todos"
+              v-for="todo in todoStore.todos.filter(t => !hideCompletedTodos || !t.completed)"
               :key="todo.id"
               :class="['todo-row flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200', todo.completed ? 'todo-row-completed' : '']"
             >
