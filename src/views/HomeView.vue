@@ -1212,7 +1212,7 @@ onUnmounted(() => {
           <h2 class="text-xl font-semibold text-card-foreground">{{ $t('create_new_event') }}</h2>
           <button
             @click="openNewEventModal()"
-            class="mini-cal-toggle-btn rounded-md border p-1 md:p-2 transition"
+            class="create-header-action mini-cal-toggle-btn rounded-md border p-1 md:p-2 transition"
             :title="$t('create_new_event')"
           >
             <PlusIcon class="h-4 w-4 md:h-6 md:w-6" />
@@ -1249,7 +1249,7 @@ onUnmounted(() => {
           <button
             @click="createEvent"
             :disabled="isLoading"
-            class="agenda-create-button mt-2 flex w-full items-center justify-center rounded-md p-3 text-white transition sm:mt-0 sm:w-16"
+            class="create-submit-button agenda-create-button mt-2 flex w-full items-center justify-center rounded-md p-3 text-white transition sm:mt-0 sm:w-16"
             :aria-label="$t('create_event')"
           >
              <svg v-if="isLoading" class="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1259,7 +1259,7 @@ onUnmounted(() => {
             <PlusIcon v-else class="h-6 w-6" />
           </button>
         </div>
-        <div class="mt-2 flex flex-wrap gap-1">
+        <div class="create-shortcuts mt-2 flex flex-wrap gap-1">
           <button
             @click="appendToInput(' at ')"
             class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition md:px-3 md:py-1.5 md:text-sm"
@@ -1280,7 +1280,7 @@ onUnmounted(() => {
           >{{ hour }}</button>
         </div>
         <!-- mobile minutes -->
-        <div class="mt-1 flex flex-wrap gap-1 md:hidden">
+        <div class="create-shortcuts mt-1 flex flex-wrap gap-1 md:hidden">
           <button
             v-for="min in [15,30,45]"
             :key="min"
@@ -1289,7 +1289,7 @@ onUnmounted(() => {
           >:{{ min }}</button>
         </div>
         <!-- desktop minutes: per 10 + 15, 45 -->
-        <div class="mt-1 hidden flex-wrap gap-1 md:flex">
+        <div class="create-shortcuts mt-1 hidden flex-wrap gap-1 md:flex">
           <button
             v-for="min in [10,15,20,30,40,45,50]"
             :key="min"
@@ -1297,7 +1297,7 @@ onUnmounted(() => {
             class="mini-cal-toggle-btn rounded-md border px-3 py-1.5 text-sm transition"
           >:{{ min }}</button>
         </div>
-        <div class="mt-1 flex gap-1">
+        <div class="create-shortcuts mt-1 flex gap-1">
           <button
             @click="appendToInput(' today')"
             class="mini-cal-toggle-btn rounded-md border px-2.5 py-1 text-xs font-medium transition md:px-3 md:py-1.5 md:text-sm"
@@ -2030,5 +2030,29 @@ select.agenda-input option {
   border-color: hsl(var(--primary) / 0.5);
   background-color: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
+}
+
+@media (max-width: 639px) {
+  .create-header-action {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.625rem;
+  }
+
+  .create-submit-button {
+    min-height: 52px;
+  }
+
+  .create-shortcuts {
+    gap: 0.375rem;
+  }
+
+  .create-shortcuts .mini-cal-toggle-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1;
+  }
 }
 </style>
