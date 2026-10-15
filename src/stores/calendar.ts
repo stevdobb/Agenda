@@ -46,7 +46,6 @@ const defaultEventTypes: EventType[] = [
 export const useCalendarStore = defineStore('calendar', () => {
   const events = ref<CalendarEvent[]>([])
   const eventTypes = ref<EventType[]>([])
-  const selectedEvent = ref<CalendarEvent | null>(null) // New: To store the event being edited
   const hiddenEventTypes = ref<Set<string>>(new Set()) // New: To store event types that are currently hidden
   const totalLeaveDays = ref(32) // New: For configurable leave days
   const selectedYear = ref(new Date().getFullYear())
@@ -379,7 +378,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     clearData,
     leaveDayStats,
     monthlyLeaveStats,
-    selectedEvent,
     hiddenEventTypes, // New: Return hiddenEventTypes
     toggleEventTypeVisibility, // New: Return toggleEventTypeVisibility
     isEventHidden,

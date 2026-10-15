@@ -52,8 +52,7 @@ function deleteEvent(id: string) {
 }
 
 function editEvent(event: CalendarEvent) {
-    store.selectedEvent = event
-    emit('editEvent')
+    emit('editEvent', event)
 }
 
 function formatEventDates(event: CalendarEvent): string {

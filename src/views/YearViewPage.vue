@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import YearView from '@/components/YearView.vue'
 import EventEditor from '@/components/EventEditor.vue'
+import EventEditModal from '@/components/EventEditModal.vue'
 import PrintLegend from '@/components/PrintLegend.vue'
 import EventList from '@/components/EventList.vue' // Import the new component
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -12,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import TopMenu from '@/components/TopMenu.vue'
 import { FilePlus, FileText, CalendarPlus, Calendar, RotateCcw, Printer, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
-import { useCalendarStore } from '@/stores/calendar'
+import { useCalendarStore, type CalendarEvent } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
 import { parseIcsContent, exportIcsContent, type ParsedIcsEvent } from '@/services/icsService' // New: Import ICS service
 
@@ -25,7 +26,7 @@ const importFile = ref<HTMLInputElement | null>(null)
 const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file import
 const showConfirmModal = ref(false)
 const showSettingsModal = ref(false)
-const eventEditorRef = ref<HTMLElement | null>(null)
+const editingEvent = ref<CalendarEvent | null>(null)
 const thisYear = new Date().getFullYear()
 
 store.selectedYear = thisYear
@@ -36,7 +37,7 @@ function changeYear(delta: number) {
 
 function handleYearKeydown(event: KeyboardEvent) {
   const target = event.target as HTMLElement | null
-  if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
+  if (editingEvent.value || target?.closest('input, textarea, select, [contenteditable="true"]')) {
     return
   }
   if (event.altKey || event.ctrlKey || event.metaKey) {
@@ -193,9 +194,8 @@ function handleOpenSettings() {
   showSettingsModal.value = true
 }
 
-async function scrollToEventEditor() {
-  await nextTick()
-  eventEditorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+function openEventEditor(event: CalendarEvent) {
+  editingEvent.value = event
 }
 </script>
 
@@ -210,6 +210,7 @@ async function scrollToEventEditor() {
           @cancel="showConfirmModal = false"
       />
       <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+      <EventEditModal v-if="editingEvent" :event="editingEvent" @close="editingEvent = null" />
 
       <TopMenu 
         currentView="year" 
@@ -221,9 +222,7 @@ async function scrollToEventEditor() {
 
       <div class="no-print grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div class="lg:col-span-2 flex flex-col gap-8">
-          <div ref="eventEditorRef">
-            <EventEditor />
-          </div>
+          <EventEditor />
           <PrintLegend />
         </div>
         <div class="lg:col-span-1 flex flex-col gap-8">
@@ -296,14 +295,14 @@ async function scrollToEventEditor() {
       </div>
       <div class="printable-area">
         <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ store.selectedYear }}</h2>
-        <YearView />
+        <YearView @editEvent="openEventEditor" />
         <div class="mt-8 print-only print-legend-container">
           <PrintLegend />
         </div>
       </div>
       <!-- New position for EventList -->
       <div class="mt-8 no-print">
-        <EventList @editEvent="scrollToEventEditor" />
+        <EventList @editEvent="openEventEditor" />
       </div>
     </div>
   </div>

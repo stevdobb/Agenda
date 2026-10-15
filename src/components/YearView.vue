@@ -6,6 +6,10 @@ import { useCalendarStore, type CalendarEvent } from '@/stores/calendar'
 const { locale } = useI18n()
 const store = useCalendarStore()
 
+const emit = defineEmits<{
+  editEvent: [event: CalendarEvent]
+}>()
+
 const year = computed(() => store.selectedYear)
 const months = Array.from({ length: 12 }, (_, i) => i)
 const schoolHolidayTypeName = 'Schoolvakantie'
@@ -147,6 +151,13 @@ function getDayBorderClass(monthIndex: number, day: number) {
   return '';
 }
 
+function openDayEvent(monthIndex: number, day: number) {
+  const event = getEventForDay(monthIndex, day)
+  if (event) {
+    emit('editEvent', event)
+  }
+}
+
 function getEventTextStyle(event: CalendarEvent) {
   if (isSchoolHolidayEvent(event)) {
     return { color: '#000000' }
@@ -174,8 +185,9 @@ function getEventTextStyle(event: CalendarEvent) {
           :class="['month-day-cell p-1', getDayWrapperClass(month, day), getDayBorderClass(month, day)]"
         >
             <div 
-                class="month-day-badge mx-auto flex h-6 w-6 items-center justify-center rounded-full transition"
+                :class="['month-day-badge mx-auto flex h-6 w-6 items-center justify-center rounded-full transition', { 'cursor-pointer': getEventForDay(month, day) }]"
                 :style="getDayStyle(month, day)"
+                @click="openDayEvent(month, day)"
             >
                 {{ day }}
             </div>
@@ -184,10 +196,16 @@ function getEventTextStyle(event: CalendarEvent) {
 
       <!-- Events List -->
       <div class="month-events space-y-2 border-t pt-2">
-        <div v-for="event in getEventsForMonth(month)" :key="event.id" class="event-row flex items-start space-x-2 text-xs">
+        <button
+            v-for="event in getEventsForMonth(month)"
+            :key="event.id"
+            type="button"
+            class="event-row flex w-full items-start space-x-2 text-left text-xs"
+            @click="emit('editEvent', event)"
+        >
             <span class="event-date min-w-[1.25rem] shrink-0 text-right font-bold">{{ getEventDateDisplay(event) }}</span>
             <span class="event-text truncate font-bold" :title="event.customName || event.type" :style="getEventTextStyle(event)">{{ event.customName || event.type }}</span>
-        </div>
+        </button>
       </div>
     </div>
   </div>
@@ -241,6 +259,13 @@ function getEventTextStyle(event: CalendarEvent) {
   border-radius: 0.45rem;
   background-color: hsl(210 14% 92% / 0.95);
   padding: 0.3rem 0.45rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.event-row:hover {
+  border-color: hsl(210 10% 55%);
+  background-color: hsl(210 14% 98%);
 }
 
 .event-date {

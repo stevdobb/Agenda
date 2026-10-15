@@ -14,13 +14,14 @@ const { t } = useI18n()
 const store = useCalendarStore()
 const uiStore = useUiStore()
 
-// No longer need props.initialEvent, will directly use store.selectedEvent
-// const props = defineProps<{
-//   initialEvent?: CalendarEvent | null
-// }>()
+// Without an event the editor creates a new event, with an event it edits that one
+const props = defineProps<{
+  event?: CalendarEvent | null
+}>()
 
-// No longer emitting events, interacting directly with the store
-// const emit = defineEmits(['saveEvent', 'cancelEdit'])
+const emit = defineEmits(['saved', 'cancel'])
+
+const isEditing = computed(() => Boolean(props.event))
 
 const startDate = ref('')
 const endDate = ref('')
@@ -73,8 +74,8 @@ function parseDateRange(range: string) {
   return { start: start || '', end: end || start || '' }
 }
 
-// Watch store.selectedEvent to populate form fields
-watch(() => store.selectedEvent, (newEvent) => {
+// Watch the edited event to populate form fields
+watch(() => props.event, (newEvent) => {
   if (newEvent) {
     startDate.value = newEvent.startDate || '';
     endDate.value = newEvent.endDate || '';
@@ -139,16 +140,26 @@ function saveEvent() {
     customName: customName.value
   }
 
-  if (store.selectedEvent) {
+  if (props.event) {
     // Update existing event
-    store.updateEvent({ ...eventData, id: store.selectedEvent.id })
+    store.updateEvent({ ...eventData, id: props.event.id })
   } else {
     // Create new event
     store.addEvent(eventData)
+    startDate.value = ''
+    endDate.value = ''
+    dateRange.value = ''
+    customName.value = ''
   }
 
-  // Clear selected event after save/update
-  store.selectedEvent = null
+  emit('saved')
+}
+
+function deleteEvent() {
+  if (props.event && confirm(t('delete_event_confirm'))) {
+    store.removeEvent(props.event.id)
+    emit('saved')
+  }
 }
 
 
@@ -158,7 +169,7 @@ function saveEvent() {
 <template>
   <Card class="editor-card">
     <CardHeader>
-      <CardTitle>{{ $t('add_edit_event') }}</CardTitle>
+      <CardTitle>{{ isEditing ? $t('edit_event') : $t('add_edit_event') }}</CardTitle>
     </CardHeader>
     <CardContent>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -199,8 +210,9 @@ function saveEvent() {
       </div>
     </CardContent>
     <CardFooter class="flex justify-end gap-2">
-        <Button v-if="store.selectedEvent" variant="outline" @click="store.selectedEvent = null">{{ $t('cancel') }}</Button>
-        <Button @click="saveEvent">{{ store.selectedEvent ? $t('update_event') : $t('save_event') }}</Button>
+        <Button v-if="isEditing" variant="destructive" class="mr-auto" @click="deleteEvent">{{ $t('delete') }}</Button>
+        <Button v-if="isEditing" variant="outline" @click="emit('cancel')">{{ $t('cancel') }}</Button>
+        <Button @click="saveEvent">{{ isEditing ? $t('update_event') : $t('save_event') }}</Button>
     </CardFooter>
   </Card>
 </template>
