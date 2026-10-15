@@ -49,6 +49,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const selectedEvent = ref<CalendarEvent | null>(null) // New: To store the event being edited
   const hiddenEventTypes = ref<Set<string>>(new Set()) // New: To store event types that are currently hidden
   const totalLeaveDays = ref(32) // New: For configurable leave days
+  const selectedYear = ref(new Date().getFullYear())
 
   const includedLeaveTypes = computed(() => {
     return eventTypes.value.filter(type => !excludedTypesForLeave.has(type.name));
@@ -298,31 +299,33 @@ export const useCalendarStore = defineStore('calendar', () => {
     hiddenEventTypes.value = newHiddenTypes; // Assign new Set to trigger watch
   }
 
-  const leaveDayStats = computed(() => {
-    let plannedDays = 0
-    const currentYear = new Date().getFullYear()
-    const allHolidays = getBelgianHolidays(currentYear).map((h) => h.date)
-    const excludedTypes = excludedTypesForLeave
-
-    events.value.forEach((event) => {
-      const resolvedType = getEventTypeNameForEvent(event) ?? event.type
-      if (excludedTypes.has(resolvedType)) {
-        return
-      }
-
-      const start = new Date(event.startDate)
-      const end = new Date(event.endDate)
-
-      // Ensure start and end dates are valid before calculating
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        const workingDays = calculateWorkingDays(start, end, allHolidays)
-        if (resolvedType === 'halve dag verlof') {
-          plannedDays += workingDays * 0.5
-        } else {
-          plannedDays += workingDays
-        }
-      }
+  function hasHolidaysForYear(year: number) {
+    const prefix = `${year}-`
+    return events.value.some((event) => {
+      return getEventTypeNameForEvent(event) === 'Wettelijke feestdag' && event.startDate.startsWith(prefix)
     })
+  }
+
+  function addHolidaysForYear(year: number) {
+    const holidayType = eventTypes.value.find(t => t.name === 'Wettelijke feestdag')
+    const schoolHolidayType = eventTypes.value.find(t => t.name === 'Schoolvakantie')
+
+    if (holidayType) {
+      getBelgianHolidays(year).forEach((h) => {
+        addEvent({ startDate: h.date, endDate: h.date, type: h.name, color: holidayType.color })
+      })
+    }
+
+    if (schoolHolidayType) {
+      getBelgianSchoolHolidays(year).forEach((h) => {
+        addEvent({ startDate: h.startDate, endDate: h.endDate, type: h.name, color: schoolHolidayType.color })
+      })
+    }
+  }
+
+  const leaveDayStats = computed(() => {
+    // Leave days are counted per year, for the year shown in the year view
+    const plannedDays = monthlyLeaveStats.value.reduce((sum, days) => sum + days, 0)
 
     const remainingDays = totalLeaveDays.value - plannedDays
     return {
@@ -335,7 +338,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const monthlyLeaveStats = computed(() => {
     const monthlyUsed = Array.from({ length: 12 }, () => 0);
     const excludedTypes = excludedTypesForLeave;
-    const currentYear = new Date().getFullYear();
+    const currentYear = selectedYear.value;
     const allHolidays = getBelgianHolidays(currentYear).map(h => h.date);
   
     events.value.forEach(event => {
@@ -384,5 +387,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     getEventTypeNameForEvent,
     includedLeaveTypes,
     totalLeaveDays,
+    selectedYear,
+    hasHolidaysForYear,
+    addHolidaysForYear,
   };
 })

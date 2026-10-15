@@ -6,7 +6,7 @@ import { useCalendarStore, type CalendarEvent } from '@/stores/calendar'
 const { locale } = useI18n()
 const store = useCalendarStore()
 
-const year = computed(() => new Date().getFullYear())
+const year = computed(() => store.selectedYear)
 const months = Array.from({ length: 12 }, (_, i) => i)
 const schoolHolidayTypeName = 'Schoolvakantie'
 const schoolHolidayColor = computed(() => {

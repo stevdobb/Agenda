@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import YearView from '@/components/YearView.vue'
 import EventEditor from '@/components/EventEditor.vue'
@@ -10,7 +10,7 @@ import SettingsModal from '@/components/SettingsModal.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import TopMenu from '@/components/TopMenu.vue'
-import { FilePlus, FileText, CalendarPlus, Calendar, RotateCcw, Printer } from 'lucide-vue-next'
+import { FilePlus, FileText, CalendarPlus, Calendar, RotateCcw, Printer, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 // import { DatePickerRange } from '@/components/ui/datepickerrange' // Import DatePickerRange
 import { useCalendarStore } from '@/stores/calendar'
 import { useUiStore } from '@/stores/ui'
@@ -26,6 +26,32 @@ const importIcsFile = ref<HTMLInputElement | null>(null) // New: For ICS file im
 const showConfirmModal = ref(false)
 const showSettingsModal = ref(false)
 const eventEditorRef = ref<HTMLElement | null>(null)
+const thisYear = new Date().getFullYear()
+
+store.selectedYear = thisYear
+
+function changeYear(delta: number) {
+  store.selectedYear += delta
+}
+
+function handleYearKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
+    return
+  }
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return
+  }
+
+  if (event.key === 'ArrowLeft') {
+    changeYear(-1)
+  } else if (event.key === 'ArrowRight') {
+    changeYear(1)
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleYearKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleYearKeydown))
 
 function printView() {
   window.print()
@@ -203,7 +229,7 @@ async function scrollToEventEditor() {
         <div class="lg:col-span-1 flex flex-col gap-8">
           <Card class="year-side-card">
             <CardHeader>
-              <CardTitle>Verlofdagen</CardTitle>
+              <CardTitle>Verlofdagen {{ store.selectedYear }}</CardTitle>
             </CardHeader>
             <CardContent>
               <div class="flex justify-between py-1">
@@ -249,8 +275,27 @@ async function scrollToEventEditor() {
           </Card>
         </div>
       </div>
+      <div class="year-nav no-print mb-6 flex flex-wrap items-center justify-center gap-3">
+        <Button variant="outline" size="icon" class="year-action-button" aria-label="Vorig jaar" title="Vorig jaar (←)" @click="changeYear(-1)">
+          <ChevronLeft class="h-5 w-5" />
+        </Button>
+        <h2 class="min-w-[5ch] text-center text-3xl font-bold tabular-nums text-white">{{ store.selectedYear }}</h2>
+        <Button variant="outline" size="icon" class="year-action-button" aria-label="Volgend jaar" title="Volgend jaar (→)" @click="changeYear(1)">
+          <ChevronRight class="h-5 w-5" />
+        </Button>
+        <Button v-if="store.selectedYear !== thisYear" variant="secondary" @click="store.selectedYear = thisYear">
+          Naar {{ thisYear }}
+        </Button>
+        <Button
+          v-if="!store.hasHolidaysForYear(store.selectedYear)"
+          variant="secondary"
+          @click="store.addHolidaysForYear(store.selectedYear)"
+        >
+          <CalendarPlus class="mr-2 h-4 w-4" /> Feestdagen &amp; schoolvakanties {{ store.selectedYear }} toevoegen
+        </Button>
+      </div>
       <div class="printable-area">
-        <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ new Date().getFullYear() }}</h2>
+        <h2 class="text-2xl font-bold text-center mb-4 print-only">{{ store.selectedYear }}</h2>
         <YearView />
         <div class="mt-8 print-only print-legend-container">
           <PrintLegend />
